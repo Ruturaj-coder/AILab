@@ -1,0 +1,4690 @@
+﻿-------------------------------------------
+3. Best-First Search Algorithm
+-------------------------------------------
+3.1 Route Finding
+
+PS: You are given a 5x5 grid where:
+
+1 represents a traversable cell.
+
+0 represents a blocked cell (wall).
+
+You need to find a path from a start cell (0, 0) to a destination cell (4, 4) using Best-First Search.
+
+The algorithm should print the path taken to reach the destination using the Manhattan distance as a heuristic.
+
+Code:
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+#define ROW 5
+#define COL 5
+
+typedef struct
+{
+    int row, col;
+} Point;
+
+typedef struct
+{
+    Point parent;
+    int h;
+} Cell;
+
+int isValid(int row, int col)
+{
+    return (row >= 0 && row < ROW && col >= 0 && col < COL);
+}
+
+int isBlocked(int grid[ROW][COL], int row, int col)
+{
+    return grid[row][col] == 0;
+}
+
+int isDestination(int row, int col, Point dest)
+{
+    return row == dest.row && col == dest.col;
+}
+
+int heuristic(int row, int col, Point dest)
+{
+    return abs(row - dest.row) + abs(col - dest.col); // Manhattan distance
+}
+
+void tracePath(Cell cells[ROW][COL], Point dest)
+{
+    printf("\nPath:\n");
+    Point p = dest;
+    while (!(cells[p.row][p.col].parent.row == p.row && cells[p.row][p.col].parent.col == p.col))
+    {
+        printf("-> (%d,%d) ", p.row, p.col);
+        p = cells[p.row][p.col].parent;
+    }
+    printf("-> (%d,%d)\n", p.row, p.col);
+}
+
+void printOpenList(Point open[], int size, Cell cells[ROW][COL])
+{
+    printf("Open list: ");
+    for (int i = 0; i < size; i++)
+    {
+        printf("(%d,%d h=%d) ", open[i].row, open[i].col,
+               cells[open[i].row][open[i].col].h);
+    }
+    printf("\n");
+}
+
+void bestFirstSearch(int grid[ROW][COL], Point start, Point dest)
+{
+    if (!isValid(start.row, start.col) || !isValid(dest.row, dest.col))
+    {
+        printf("Invalid start or destination\n");
+        return;
+    }
+    if (isBlocked(grid, start.row, start.col) || isBlocked(grid, dest.row, dest.col))
+    {
+        printf("Start or destination blocked\n");
+        return;
+    }
+
+    int closed[ROW][COL] = {0};
+    static Cell cells[ROW][COL]; // static to access inside printOpenList
+
+    for (int i = 0; i < ROW; i++)
+        for (int j = 0; j < COL; j++)
+        {
+            cells[i][j].h = INT_MAX;
+            cells[i][j].parent = (Point){-1, -1};
+        }
+
+    cells[start.row][start.col].h = heuristic(start.row, start.col, dest);
+    cells[start.row][start.col].parent = start;
+
+    Point open[ROW * COL];
+    int openSize = 0;
+    open[openSize++] = start;
+
+    int dr[] = {-1, 1, 0, 0}; // up, down, left, right
+    int dc[] = {0, 0, -1, 1};
+
+    while (openSize > 0)
+    {
+        int idx = 0;
+        for (int i = 1; i < openSize; i++)
+        {
+            if (cells[open[i].row][open[i].col].h < cells[open[idx].row][open[idx].col].h)
+                idx = i;
+        }
+
+        Point current = open[idx];
+        open[idx] = open[--openSize];
+
+        printf("\nExploring node (%d,%d) with h=%d\n", current.row, current.col, cells[current.row][current.col].h);
+        closed[current.row][current.col] = 1;
+
+        if (isDestination(current.row, current.col, dest))
+        {
+            tracePath(cells, dest);
+            return;
+        }
+
+        for (int d = 0; d < 4; d++)
+        {
+            int nr = current.row + dr[d];
+            int nc = current.col + dc[d];
+
+            if (isValid(nr, nc) && !isBlocked(grid, nr, nc) && !closed[nr][nc])
+            {
+                int hNew = heuristic(nr, nc, dest);
+
+                if (cells[nr][nc].h == INT_MAX || cells[nr][nc].h > hNew)
+                {
+                    cells[nr][nc].h = hNew;
+                    cells[nr][nc].parent = current;
+                    open[openSize++] = (Point){nr, nc};
+
+                    printf("  Added neighbor (%d,%d) with h=%d to open list\n", nr, nc, hNew);
+                }
+            }
+        }
+
+        printOpenList(open, openSize, cells);
+    }
+
+    printf("No path found.\n");
+}
+
+int main()
+{
+    int grid[ROW][COL] = {
+        {1, 1, 1, 1, 1},
+        {1, 0, 0, 0, 1},
+        {1, 1, 1, 0, 1},
+        {0, 0, 1, 1, 1},
+        {1, 1, 1, 0, 1}};
+
+    Point start = {0, 0}, dest = {4, 4};
+
+    bestFirstSearch(grid, start, dest);
+    return 0;
+}
+
+⚙️ Explanation of Functions
+1. isValid(int row, int col)
+Checks if a cell is within the grid boundaries.
+
+Returns: 1 if valid, 0 otherwise.
+
+2. isBlocked(int grid[ROW][COL], int row, int col)
+Checks if a cell is blocked.
+
+Returns: 1 if blocked (grid[row][col] == 0), else 0.
+
+3. isDestination(int row, int col, Point dest)
+Checks if the current cell is the destination.
+
+Returns: 1 if matched, 0 otherwise.
+
+4. heuristic(int row, int col, Point dest)
+Calculates Manhattan distance (used as heuristic in Best-First Search).
+
+Returns: Absolute distance to the destination cell.
+
+5. tracePath(Cell cells[ROW][COL], Point dest)
+Traces the final path from destination to start using the parent of each cell.
+
+Prints: Path in the format -> (row, col).
+
+6. bestFirstSearch(...)
+Main logic for Best-First Search.
+
+Uses a greedy approach to expand the node with the lowest heuristic (h).
+
+Maintains an open list (array of Points), and a closed matrix to avoid re-visits.
+
+Uses a custom Cell structure to store h and parent of each cell.
+
+📊 Explanation of Variables
+Variable	Type	Description
+ROW, COL	#define	Dimensions of the grid
+Point	struct	Stores a cell's row and column
+Cell	struct	Stores cell's parent, heuristic h
+grid	int[][]	2D grid representing the map
+closed	int[][]	2D array to track visited cells
+cells	Cell[][]	Stores parent and h for each cell
+open[]	Point[]	Open list (nodes to explore)
+openSize	int	Number of elements in open list
+dr[], dc[]	int[]	Direction vectors (up, down, left, right)
+
+🔁 Flow of Execution
+python
+Copy
+Edit
+main()
+│
+├── Initialize the grid, start, and destination points
+│
+└── Call bestFirstSearch(grid, start, dest)
+     │
+     ├── Validate inputs (start/destination within bounds and not blocked)
+     │
+     ├── Initialize:
+     │   ├── closed[][] = all 0s
+     │   ├── cells[][] with h = INT_MAX, parent = {-1, -1}
+     │   └── open[] list with start point
+     │
+     └── While open list is not empty:
+         ├── Find point in open[] with lowest `h`
+         ├── Remove it from open[]
+         ├── Mark as visited in closed[][]
+         ├── If destination found, tracePath() and return
+         ├── For each valid neighbor:
+         │   ├── If not blocked and not closed:
+         │   ├── Compute hNew = heuristic()
+         │   ├── If current h > hNew:
+         │   │   └── Update cell’s h and parent
+         │   └── Add neighbor to open[]
+         │
+         └── If no path found after open[] is empty:
+             └── Print “No path found.”
+
+-------------------------------------------
+3.2 8-puzzle
+
+PS: Implement an AI to solve the 8-puzzle problem using Best-First Search.
+The goal is to transform an initial 3x3 puzzle configuration into a goal configuration using tile moves (up, down, left, right) and a heuristic (Manhattan distance) to guide the search.
+
+Code:
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define N 3
+
+typedef struct
+{
+    int puzzle[N][N];
+    int h;
+} Node;
+
+typedef struct
+{
+    Node heap[1000];
+    int size;
+} PriorityQueue;
+
+void swap(Node *a, Node *b)
+{
+    Node temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+void insert(PriorityQueue *pq, Node node)
+{
+    int i = pq->size++;
+    pq->heap[i] = node;
+
+    while (i > 0)
+    {
+        int parent = (i - 1) / 2;
+        if (pq->heap[i].h < pq->heap[parent].h)
+        {
+            swap(&pq->heap[i], &pq->heap[parent]);
+            i = parent;
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+
+Node extract_min(PriorityQueue *pq)
+{
+    Node minNode = pq->heap[0];
+    pq->heap[0] = pq->heap[--pq->size];
+
+    int i = 0;
+    while (2 * i + 1 < pq->size)
+    {
+        int left = 2 * i + 1, right = 2 * i + 2, minIdx = i;
+
+        if (pq->heap[left].h < pq->heap[minIdx].h)
+        {
+            minIdx = left;
+        }
+        if (right < pq->size && pq->heap[right].h < pq->heap[minIdx].h)
+        {
+            minIdx = right;
+        }
+        if (minIdx == i)
+            break;
+
+        swap(&pq->heap[i], &pq->heap[minIdx]);
+        i = minIdx;
+    }
+    return minNode;
+}
+
+int calculate_heuristic(int puzzle[N][N])
+{
+    int cost = 0;
+    int goal[N][N] = {
+        {1, 2, 3},
+        {8, 0, 4},
+        {7, 6, 5}};
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            if (puzzle[i][j] != 0)
+            {
+                for (int x = 0; x < N; x++)
+                {
+                    for (int y = 0; y < N; y++)
+                    {
+                        if (puzzle[i][j] == goal[x][y])
+                        {
+                            cost += abs(i - x) + abs(j - y);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return cost;
+}
+
+void print_puzzle(int puzzle[N][N])
+{
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            printf("%d ", puzzle[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void printOpenList(PriorityQueue *pq)
+{
+    printf("Open List (size = %d):\n", pq->size);
+    for (int i = 0; i < pq->size; i++)
+    {
+        printf("Node %d (h = %d):\n", i + 1, pq->heap[i].h);
+        print_puzzle(pq->heap[i].puzzle);
+    }
+    printf("----------------------------------------\n");
+}
+
+int solve_puzzle(int initial[N][N])
+{
+    PriorityQueue pq = {.size = 0};
+
+    Node start;
+    memcpy(start.puzzle, initial, sizeof(start.puzzle));
+    start.h = calculate_heuristic(start.puzzle);
+
+    insert(&pq, start);
+
+    while (pq.size > 0)
+    {
+        Node current = extract_min(&pq);
+        printf("Current Node (h = %d):\n", current.h);
+        print_puzzle(current.puzzle);
+
+        if (current.h == 0)
+        {
+            printf("Goal State Reached!\n");
+            return 1;
+        }
+
+        int emptyX, emptyY;
+        for (int i = 0; i < N; i++)
+        {
+            for (int j = 0; j < N; j++)
+            {
+                if (current.puzzle[i][j] == 0)
+                {
+                    emptyX = i;
+                    emptyY = j;
+                }
+            }
+        }
+
+        int dx[] = {1, 0, -1, 0};
+        int dy[] = {0, 1, 0, -1};
+
+        for (int k = 0; k < 4; k++)
+        {
+            int x = emptyX + dx[k];
+            int y = emptyY + dy[k];
+
+            if (x >= 0 && x < N && y >= 0 && y < N)
+            {
+                Node next;
+                memcpy(next.puzzle, current.puzzle, sizeof(next.puzzle));
+                next.puzzle[emptyX][emptyY] = current.puzzle[x][y];
+                next.puzzle[x][y] = 0;
+                next.h = calculate_heuristic(next.puzzle);
+
+                insert(&pq, next);
+            }
+        }
+
+        // Print current open list
+        printOpenList(&pq);
+    }
+    return 0;
+}
+
+int main()
+{
+    int initial[N][N] = {
+        {2, 8, 3},
+        {1, 6, 4},
+        {7, 0, 5}};
+
+    printf("\nSolving using Best-First Search...\n");
+    solve_puzzle(initial);
+
+    return 0;
+}
+
+⚙️ Explanation of Functions
+🔹 swap(Node *a, Node *b)
+Swaps two nodes in the priority queue heap.
+
+🔹 insert(PriorityQueue *pq, Node node)
+Inserts a Node into the priority queue (min-heap based on heuristic h).
+
+Maintains heap order using upward heapify.
+
+🔹 extract_min(PriorityQueue *pq)
+Removes and returns the node with the lowest heuristic (h).
+
+Maintains heap order using downward heapify.
+
+🔹 calculate_heuristic(int puzzle[N][N])
+Calculates the Manhattan distance from the current state to the goal state.
+
+This is the sum of the distances each tile is from its target location.
+
+🔹 print_puzzle(int puzzle[N][N])
+Nicely prints the 3x3 puzzle grid.
+
+🔹 solve_puzzle(int initial[N][N])
+This is the main algorithm:
+
+Initializes the start node.
+
+Uses Best-First Search (Greedy strategy based only on heuristic).
+
+Repeatedly:
+
+Picks the puzzle configuration with the lowest heuristic.
+
+Prints it.
+
+If goal state is reached (h=0), prints success.
+
+Otherwise, explores all valid neighbor states by sliding the blank tile (0) in 4 directions and pushing them into the priority queue.
+
+📊 Explanation of Variables
+Variable	Type	Description
+N	#define	Size of the puzzle (3x3)
+Node	struct	Represents a puzzle state and its heuristic h
+PriorityQueue	struct	Implements a binary min-heap based on heuristic
+pq	PriorityQueue	Open list of nodes to explore
+start	Node	Starting state
+current	Node	Current state being expanded
+emptyX, emptyY	int	Coordinates of the blank tile (0)
+dx[], dy[]	int[]	Directions for tile movement (up, right, down, left)
+goal[][]	int[3][3]	The target configuration
+insert, extract_min	Functions	For managing the priority queue
+calculate_heuristic	Function	Returns total Manhattan distance of the current state
+
+🔁 Flow of Execution
+sql
+Copy
+Edit
+main()
+│
+├── Define the initial puzzle configuration
+│
+└── Call solve_puzzle(initial)
+     │
+     ├── Create a PriorityQueue (open list)
+     ├── Create a Node from initial puzzle
+     ├── Calculate its heuristic (h)
+     └── Insert Node into PriorityQueue
+         ↓
+     WHILE (pq.size > 0)
+     │
+     ├── extract_min() → current node with lowest heuristic
+     ├── print_puzzle(current)
+     │
+     ├── IF current.h == 0
+     │    └── Goal reached → print success and return
+     │
+     ├── Find blank tile's (0) position (emptyX, emptyY)
+     └── For each direction in {up, right, down, left}
+         │
+         ├── If move is valid:
+         │    ├── Copy current puzzle to a new Node
+         │    ├── Swap blank with adjacent tile
+         │    ├── Calculate heuristic of new Node
+         │    └── Insert into PriorityQueue
+         │
+         └── Continue loop until goal found or queue empty
+
+-------------------------------------------
+4. A* Algorithm
+-------------------------------------------
+4.1 Route Finding
+
+PS:You are given a 5x5 grid representing a map. Each cell can either be:
+
+1 → Walkable
+
+0 → Blocked (Obstacle)
+
+Your task is to find the shortest path from a start cell to a destination cell using the A* (A-star) Search Algorithm, considering 8 possible directions (up, down, left, right, and the 4 diagonals).
+
+Code:
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+#define ROW 5
+#define COL 5
+
+typedef struct
+{
+    int row, col;
+} Point;
+
+typedef struct
+{
+    Point parent;
+    int f, g, h;
+} Cell;
+
+int isValid(int row, int col)
+{
+    return (row >= 0 && row < ROW && col >= 0 && col < COL);
+}
+
+int isBlocked(int grid[ROW][COL], int row, int col)
+{
+    return grid[row][col] == 0;
+}
+
+int isDestination(int row, int col, Point dest)
+{
+    return row == dest.row && col == dest.col;
+}
+
+int heuristic(int row, int col, Point dest)
+{
+    return abs(row - dest.row) + abs(col - dest.col); // Manhattan distance
+}
+
+void printGrid(int grid[ROW][COL], Point path[], int pathLen, Point start, Point dest)
+{
+    char visual[ROW][COL];
+
+    for (int i = 0; i < ROW; i++)
+    {
+        for (int j = 0; j < COL; j++)
+        {
+            if (grid[i][j] == 0)
+                visual[i][j] = '#'; // obstacle
+            else
+                visual[i][j] = '.'; // walkable
+        }
+    }
+
+    for (int i = 0; i < pathLen; i++)
+    {
+        Point p = path[i];
+        visual[p.row][p.col] = '*'; // path
+    }
+
+    visual[start.row][start.col] = 'S';
+    visual[dest.row][dest.col] = 'D';
+
+    printf("\nGrid Path Visualization:\n");
+    for (int i = 0; i < ROW; i++)
+    {
+        for (int j = 0; j < COL; j++)
+        {
+            printf(" %c ", visual[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+void tracePath(Cell cells[ROW][COL], Point dest, Point start)
+{
+    Point path[ROW * COL];
+    int len = 0;
+    Point p = dest;
+
+    while (!(cells[p.row][p.col].parent.row == p.row && cells[p.row][p.col].parent.col == p.col))
+    {
+        path[len++] = p;
+        p = cells[p.row][p.col].parent;
+    }
+    path[len++] = p;
+
+    // Reverse and print
+    printf("\nShortest Path:\n");
+    for (int i = len - 1; i >= 0; i--)
+    {
+        printf("(%d,%d)%s", path[i].row, path[i].col, i > 0 ? " -> " : "\n");
+    }
+
+    printGrid((int[ROW][COL]){
+                  {1, 1, 1, 1, 1},
+                  {1, 0, 0, 0, 1},
+                  {1, 1, 1, 0, 1},
+                  {0, 0, 1, 1, 1},
+                  {1, 1, 1, 0, 1}},
+              path, len, start, dest);
+}
+
+void aStar(int grid[ROW][COL], Point start, Point dest)
+{
+    if (!isValid(start.row, start.col) || !isValid(dest.row, dest.col))
+    {
+        printf("Invalid start or destination\n");
+        return;
+    }
+    if (isBlocked(grid, start.row, start.col) || isBlocked(grid, dest.row, dest.col))
+    {
+        printf("Start or destination blocked\n");
+        return;
+    }
+
+    int closed[ROW][COL] = {0};
+    Cell cells[ROW][COL];
+
+    // Initialize all cells
+    for (int i = 0; i < ROW; i++)
+    {
+        for (int j = 0; j < COL; j++)
+        {
+            cells[i][j].f = cells[i][j].g = cells[i][j].h = INT_MAX;
+            cells[i][j].parent = (Point){-1, -1};
+        }
+    }
+
+    // Start cell setup
+    cells[start.row][start.col].f = 0;
+    cells[start.row][start.col].g = 0;
+    cells[start.row][start.col].h = 0;
+    cells[start.row][start.col].parent = start;
+
+    Point open[ROW * COL];
+    int openSize = 0;
+    open[openSize++] = start;
+
+    int dr[] = {-1, 1, 0, 0}; // directions: up, down, left, right
+    int dc[] = {0, 0, -1, 1};
+
+    while (openSize > 0)
+    {
+        // Get node with smallest f
+        int idx = 0;
+        for (int i = 1; i < openSize; i++)
+        {
+            if (cells[open[i].row][open[i].col].f < cells[open[idx].row][open[idx].col].f)
+                idx = i;
+        }
+
+        Point current = open[idx];
+        open[idx] = open[--openSize]; // Remove current from open
+        closed[current.row][current.col] = 1;
+
+        if (isDestination(current.row, current.col, dest))
+        {
+            tracePath(cells, dest, start);
+            return;
+        }
+
+        // Explore neighbors
+        for (int d = 0; d < 4; d++)
+        {
+            int nr = current.row + dr[d];
+            int nc = current.col + dc[d];
+
+            if (isValid(nr, nc) && !isBlocked(grid, nr, nc) && !closed[nr][nc])
+            {
+                int gNew = cells[current.row][current.col].g + 1;
+                int hNew = heuristic(nr, nc, dest);
+                int fNew = gNew + hNew;
+
+                if (cells[nr][nc].f == INT_MAX || cells[nr][nc].f > fNew)
+                {
+                    cells[nr][nc].f = fNew;
+                    cells[nr][nc].g = gNew;
+                    cells[nr][nc].h = hNew;
+                    cells[nr][nc].parent = current;
+                    open[openSize++] = (Point){nr, nc};
+                }
+            }
+        }
+    }
+
+    printf("No path found.\n");
+}
+
+int main()
+{
+    int grid[ROW][COL] = {
+        {1, 1, 1, 1, 1},
+        {1, 0, 0, 0, 1},
+        {1, 1, 1, 0, 1},
+        {0, 0, 1, 1, 1},
+        {1, 1, 1, 0, 1}};
+
+    Point start = {0, 0}, dest = {3, 3};
+
+    printf("Starting A* Pathfinding...\n");
+    aStar(grid, start, dest);
+    return 0;
+}
+
+⚙️ Explanation of Functions
+1. isValid(row, col)
+Checks if a cell is within the grid boundaries.
+
+c
+Copy
+Edit
+int isValid(int row, int col)
+2. isDestination(row, col, dest)
+Checks if the current cell is the destination.
+
+c
+Copy
+Edit
+int isDestination(int row, int col, Pair dest)
+3. calculateHValue(row, col, dest)
+Computes the Manhattan distance (heuristic h) from a cell to the destination.
+
+c
+Copy
+Edit
+int calculateHValue(int row, int col, Pair dest)
+4. tracePath(cellDetails, dest)
+Prints the path from the destination to the start by tracing parents of each cell.
+
+c
+Copy
+Edit
+void tracePath(Cell cellDetails[ROW][COL], Pair dest)
+5. aStarSearch(grid, start, dest)
+Main function that implements A* algorithm using:
+
+openList → to explore next cells
+
+closedList → visited cells
+
+f = g + h → total cost
+
+g → cost from start
+
+h → estimated cost to destination
+
+c
+Copy
+Edit
+void aStarSearch(int grid[ROW][COL], Pair start, Pair dest)
+📊 Explanation of Important Variables
+Variable	Description
+ROW, COL	Grid size (5x5)
+grid[][]	The input map: 1 = walkable, 0 = blocked
+Cell	Stores f, g, h and parent coordinates for a cell
+Pair	Holds (row, col) coordinate pair
+openList	Array of cells to be explored (simulating a priority queue)
+closedList	Marks whether a cell has been visited
+dirRow[], dirCol[]	Represents the 8 directions for movement
+f	Total cost (g + h)
+g	Cost from start to current cell
+h	Heuristic cost from current cell to destination
+
+🔁 Flow of Execution
+1. Input
+A grid (2D array) with 0s and 1s.
+
+Start and destination coordinates.
+
+2. Initial Setup
+Initialize all cell costs to INT_MAX.
+
+Mark the start cell’s g, h, and f as 0.
+
+3. Open List Initialization
+Add the start cell to openList.
+
+4. Main Loop
+While openList is not empty:
+
+Pick the cell with the lowest f value.
+
+Add it to closedList.
+
+Check all 8 neighbors:
+
+If it's the destination, trace the path.
+
+If it's valid, unvisited, and not blocked, calculate g, h, f.
+
+If f is better, update the cell and add it to openList.
+
+5. Path Found
+If destination is reached, print the path using tracePath().
+
+6. Path Not Found
+If no valid path exists, print "Failed to find the destination".
+
+
+----------------------------------------------
+4.2 8-Puzzle
+
+PS: Solve the 8-puzzle problem using the A* Search algorithm.
+Each state is represented as a 3×3 matrix where the blank tile is denoted by 0.
+The objective is to reach a goal state using the minimum number of moves, using A* guided by the heuristic: number of misplaced tiles.
+
+Code:
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define N 3
+
+typedef struct
+{
+    int puzzle[N][N];
+    int g; // depth (cost so far)
+    int h; // heuristic cost
+} Node;
+
+int goal[N][N];
+int dx[] = {1, 0, -1, 0};
+int dy[] = {0, 1, 0, -1};
+
+typedef struct
+{
+    Node heap[1000];
+    int size;
+} PriorityQueue;
+
+void swap(Node *a, Node *b)
+{
+    Node temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+void insert(PriorityQueue *pq, Node node)
+{
+    int i = pq->size++;
+    pq->heap[i] = node;
+
+    while (i > 0)
+    {
+        int parent = (i - 1) / 2;
+        int cost1 = pq->heap[i].g + pq->heap[i].h;
+        int cost2 = pq->heap[parent].g + pq->heap[parent].h;
+
+        if (cost1 < cost2)
+        {
+            swap(&pq->heap[i], &pq->heap[parent]);
+            i = parent;
+        }
+        else
+            break;
+    }
+}
+
+Node extract_min(PriorityQueue *pq)
+{
+    Node minNode = pq->heap[0];
+    pq->heap[0] = pq->heap[--pq->size];
+
+    int i = 0;
+    while (2 * i + 1 < pq->size)
+    {
+        int left = 2 * i + 1, right = 2 * i + 2;
+        int minIdx = i;
+
+        int costL = pq->heap[left].g + pq->heap[left].h;
+        int costM = pq->heap[minIdx].g + pq->heap[minIdx].h;
+        if (costL < costM)
+            minIdx = left;
+
+        if (right < pq->size)
+        {
+            int costR = pq->heap[right].g + pq->heap[right].h;
+            costM = pq->heap[minIdx].g + pq->heap[minIdx].h;
+            if (costR < costM)
+                minIdx = right;
+        }
+
+        if (minIdx == i)
+            break;
+
+        swap(&pq->heap[i], &pq->heap[minIdx]);
+        i = minIdx;
+    }
+    return minNode;
+}
+
+int calculate_heuristic(int puzzle[N][N])
+{
+    int cost = 0;
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            if (puzzle[i][j] != 0 && puzzle[i][j] != goal[i][j])
+                cost++;
+    return cost;
+}
+
+void print_puzzle(int puzzle[N][N])
+{
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+            printf("%d ", puzzle[i][j]);
+        printf("\n");
+    }
+    printf("\n");
+}
+
+int solve_puzzle(int initial[N][N])
+{
+    PriorityQueue pq = {.size = 0};
+
+    Node start;
+    memcpy(start.puzzle, initial, sizeof(start.puzzle));
+    start.g = 0;
+    start.h = calculate_heuristic(start.puzzle);
+    insert(&pq, start);
+
+    while (pq.size > 0)
+    {
+        Node current = extract_min(&pq);
+        print_puzzle(current.puzzle);
+
+        if (current.h == 0)
+        {
+            printf("Goal State Reached!\n");
+            return 1;
+        }
+
+        int emptyX, emptyY;
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                if (current.puzzle[i][j] == 0)
+                {
+                    emptyX = i;
+                    emptyY = j;
+                }
+
+        for (int k = 0; k < 4; k++)
+        {
+            int x = emptyX + dx[k];
+            int y = emptyY + dy[k];
+
+            if (x >= 0 && x < N && y >= 0 && y < N)
+            {
+                Node next;
+                memcpy(next.puzzle, current.puzzle, sizeof(next.puzzle));
+                next.puzzle[emptyX][emptyY] = current.puzzle[x][y];
+                next.puzzle[x][y] = 0;
+                next.g = current.g + 1;
+                next.h = calculate_heuristic(next.puzzle);
+                insert(&pq, next);
+            }
+        }
+    }
+
+    return 0;
+}
+
+int main()
+{
+    int initial[N][N];
+
+    printf("Enter the initial state (3x3 matrix, use 0 for the empty tile):\n");
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            scanf("%d", &initial[i][j]);
+
+    printf("Enter the goal state (3x3 matrix, use 0 for the empty tile):\n");
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            scanf("%d", &goal[i][j]);
+
+    printf("\nSolving using A* Search...\n");
+    if (!solve_puzzle(initial))
+        printf("No solution found.\n");
+
+    return 0;
+}
+
+
+
+⚙️ Explanation of Functions:
+calculate_heuristic(puzzle):
+Calculates the number of tiles that are not in their goal position (excluding 0).
+
+print_puzzle(puzzle):
+Displays the 3x3 puzzle matrix in readable format.
+
+insert(pq, node, useAStar):
+Inserts a node into the priority queue based on cost (g + h for A*).
+
+extract_min(pq, useAStar):
+Extracts the node with the lowest total cost from the priority queue.
+
+solve_puzzle(initial):
+Implements A* search. Expands nodes and adds valid moves to the queue until the goal is reached.
+
+📊 Explanation of Variables:
+Variable	Type	Description
+N	Macro	Dimension of the puzzle (3 for 3x3)
+Node	Struct	Represents a puzzle state with cost info
+goal	2D array	Final target puzzle configuration
+dx, dy	Arrays	Directions: down, right, up, left
+PriorityQueue	Struct	Min-heap to process nodes by cost
+g	Integer	Number of moves from start (depth)
+h	Integer	Heuristic cost (number of misplaced tiles)
+
+🔁 Flow of Execution:
+User inputs initial and goal 3x3 puzzle states.
+
+solve_puzzle():
+
+Initializes priority queue with start state.
+
+Repeatedly extracts the node with the lowest f = g + h cost.
+
+Checks if current node matches goal.
+
+If not, finds the blank tile and explores 4 directions (valid ones).
+
+Generates new states and inserts them into the queue.
+
+Goal is printed when found.
+
+
+-------------------------------------------
+5. Constraint Satisfaction
+-------------------------------------------
+5.1 N Queens
+
+PS: Place N queens on an N × N chessboard such that no two queens attack each other.
+
+A queen can attack another queen if they are on the same:
+
+Row
+
+Column
+
+Diagonal
+
+We need to find all possible arrangements of queens on the board that satisfy this condition and print the chessboard for each solution.
+
+Code:
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define MAX 20
+
+int X[MAX];              // Stores column positions of queens
+int count = 0;           // Number of solutions found
+int states_explored = 0; // Tracks number of states explored
+
+// Check if a queen can be placed at (k, i)
+int Place(int k, int i)
+{
+    for (int j = 1; j < k; j++)
+    {
+        if (X[j] == i || abs(X[j] - i) == abs(j - k))
+            return 0; // Not safe
+    }
+    return 1; // Safe
+}
+
+// Print the current board
+void printBoard(int n)
+{
+    printf("Solution %d:\n", count);
+    for (int i = 1; i <= n; i++)
+    {
+        for (int j = 1; j <= n; j++)
+        {
+            if (X[i] == j)
+                printf(" Q ");
+            else
+                printf(" . ");
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+// Print the current state (partial assignment)
+void printCurrentState(int k)
+{
+    printf("State %d: ", states_explored);
+    for (int i = 1; i <= k; i++)
+    {
+        printf("(%d, %d) ", i, X[i]); // (row, column)
+    }
+    printf("\n");
+}
+
+// Recursive function to solve N-Queens
+void NQueens(int k, int n)
+{
+    for (int i = 1; i <= n; i++)
+    {
+        if (Place(k, i))
+        {
+            X[k] = i;
+            states_explored++;    // New state being explored
+            printCurrentState(k); // Show current partial state
+
+            if (k == n)
+            {
+                count++;
+                printBoard(n);
+            }
+            else
+            {
+                NQueens(k + 1, n); // Go deeper
+            }
+        }
+    }
+}
+
+int main()
+{
+    int n;
+
+    printf("Enter the number of queens (n): ");
+    scanf("%d", &n);
+
+    if (n < 1 || n > MAX)
+    {
+        printf("Invalid input. Please enter n between 1 and %d\n", MAX);
+        return 1;
+    }
+
+    printf("\nExploring all possible states for %d-Queens:\n\n", n);
+    NQueens(1, n);
+
+    printf("\nTotal states explored: %d\n", states_explored);
+    if (count == 0)
+        printf("No solution exists.\n");
+    else
+        printf("Total solutions: %d\n", count);
+
+    return 0;
+}
+
+
+⚙️ Explanation of Functions
+int Place(int k, int i)
+Purpose: Check whether a queen can be placed at row k and column i without attacking previously placed queens.
+
+Returns: 1 (true) if the position is safe, 0 (false) otherwise.
+
+Logic:
+
+Loop through previously placed queens (1 to k-1).
+
+Check:
+
+Same column → X[j] == i
+
+Same diagonal → abs(X[j] - i) == abs(j - k)
+
+void printBoard(int n)
+Purpose: Print the current valid configuration of the chessboard.
+
+Logic:
+
+Loop through each row and column.
+
+If the column matches the queen's position in that row (X[i] == j), print Q, else print ..
+
+void NQueens(int k, int n)
+Purpose: Recursive backtracking function to try placing queens from row k to n.
+
+Logic:
+
+Try placing queen in all columns (1 to n) of row k.
+
+If safe (using Place), record the column in X[k].
+
+If k == n, all queens are placed — print board.
+
+Otherwise, recurse to place the next queen (k + 1).
+
+int main()
+Purpose: Take user input, validate it, and start the N-Queens algorithm.
+
+Logic:
+
+Get n from user.
+
+Validate bounds.
+
+Call NQueens(1, n) to begin solving.
+
+Print total number of solutions found.
+
+📊 Explanation of Variables
+Variable	Type	Description
+X[MAX]	int[]	Stores column positions of queens for each row. X[i] = j → Queen at row i, column j.
+count	int	Counts the number of valid solutions.
+n	int	Size of the board and number of queens (user input).
+k	int	Current row in recursion (queen being placed).
+i	int	Column being tried for queen placement.
+j	int	Index for checking conflicts with previously placed queens.
+
+🔁 Flow of Execution
+Start in main()
+
+Prompt user to enter n.
+
+Validate n.
+
+Call NQueens(1, n) to begin placing queens.
+
+In NQueens(k, n)
+
+Loop through all columns i from 1 to n.
+
+For each column, check Place(k, i):
+
+If safe:
+
+Set X[k] = i
+
+If k == n, print solution using printBoard(n)
+
+Else, recurse with NQueens(k + 1, n)
+
+If no column is safe, backtrack to previous call.
+
+In Place(k, i)
+
+Loop from j = 1 to k-1
+
+Check:
+
+Same column → X[j] == i
+
+Same diagonal → abs(X[j] - i) == abs(j - k)
+
+If any check fails, return 0
+
+Else, return 1
+
+In printBoard(n)
+
+For each row i = 1 to n:
+
+For each column j = 1 to n:
+
+If X[i] == j, print " Q "
+
+Else, print " . "
+
+Backtrack
+
+After exploring all column placements in a row, return to previous row and try a new column.
+
+End
+
+Once all configurations are tried, display total number of solutions.
+-------------------------------------------
+5.2 Sudoku Solver
+
+PS:
+
+Code: 
+#include <stdio.h>
+#include <stdbool.h>
+
+#define N 9
+
+// Function to print the Sudoku grid
+void printGrid(int grid[N][N])
+{
+    printf("\nSolved Sudoku:\n");
+    for (int row = 0; row < N; row++)
+    {
+        for (int col = 0; col < N; col++)
+            printf("%d ", grid[row][col]);
+        printf("\n");
+    }
+}
+
+// Check if it's safe to place num in grid[row][col]
+bool isSafe(int grid[N][N], int row, int col, int num)
+{
+    // Check row and column
+    for (int x = 0; x < N; x++)
+    {
+        if (grid[row][x] == num || grid[x][col] == num)
+            return false;
+    }
+
+    // Check 3x3 subgrid
+    int startRow = row - row % 3;
+    int startCol = col - col % 3;
+
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            if (grid[i + startRow][j + startCol] == num)
+                return false;
+
+    return true;
+}
+
+// Recursive function to solve the Sudoku
+bool solveSudoku(int grid[N][N], int row, int col)
+{
+    if (row == N - 1 && col == N)
+        return true;
+
+    if (col == N)
+    {
+        row++;
+        col = 0;
+    }
+
+    if (grid[row][col] != 0)
+        return solveSudoku(grid, row, col + 1);
+
+    for (int num = 1; num <= 9; num++)
+    {
+        if (isSafe(grid, row, col, num))
+        {
+            grid[row][col] = num;
+
+            if (solveSudoku(grid, row, col + 1))
+                return true;
+
+            grid[row][col] = 0; // backtrack
+        }
+    }
+
+    return false;
+}
+
+// Main function
+int main()
+{
+    int grid[N][N];
+
+    printf("Enter the Sudoku grid (use 0 for empty cells):\n");
+    for (int i = 0; i < N; i++)
+    {
+        printf("Enter 9 numbers for row %d separated by spaces:\n", i + 1);
+        for (int j = 0; j < N; j++)
+        {
+            scanf("%d", &grid[i][j]);
+        }
+    }
+
+    if (solveSudoku(grid, 0, 0))
+        printGrid(grid);
+    else
+        printf("No solution exists.\n");
+
+    return 0;
+}
+
+
+Theory: ✅ Problem Statement
+Develop a C program that solves a 9x9 Sudoku puzzle using backtracking. The program should:
+
+Take the initial Sudoku grid as user input (with 0 representing empty cells),
+
+Solve the puzzle using a recursive backtracking algorithm,
+
+Display the solved Sudoku grid or a message if no solution exists.
+
+⚙️ Explanation of Functions
+1. bool isSafe(int grid[N][N], int row, int col, int num)
+Checks if placing num at position grid[row][col] is valid:
+
+✅ No duplicate in the current row
+
+✅ No duplicate in the current column
+
+✅ No duplicate in the 3x3 subgrid containing the cell
+
+2. bool solveSudoku(int grid[N][N], int row, int col)
+The main recursive backtracking function:
+
+If the cell is pre-filled (not 0), it moves to the next column.
+
+If the column index exceeds 8, it wraps to the next row.
+
+Tries numbers 1–9. For each:
+
+If isSafe(), it places the number and recurses.
+
+If solution is found recursively, returns true.
+
+Else, backtracks (reset to 0).
+
+If no number fits, returns false.
+
+3. void printGrid(int grid[N][N])
+Prints the final solved grid in a readable format.
+
+4. int main()
+Accepts 9x9 input from the user
+
+Calls the solveSudoku() function
+
+Prints the solved puzzle or a failure message
+
+📊 Explanation of Variables
+Variable	Type	Description
+grid[N][N]	int[9][9]	2D array storing the Sudoku puzzle
+row, col	int	Indexes to track current cell in recursion
+num	int	Candidate number to try placing in a cell
+startRow	int	Start row index of the 3x3 subgrid
+startCol	int	Start column index of the 3x3 subgrid
+N	#define	Size of the grid (9 for Sudoku)
+
+🔁 Flow of Execution
+pgsql
+Copy
+Edit
+START
+│
+├─▶ main()
+│    ├─ Accepts user input for 9x9 Sudoku grid
+│    ├─ Calls solveSudoku(grid, 0, 0)
+│    └─ Prints solution (or no solution message)
+│
+├─▶ solveSudoku(grid, row, col)
+│    ├─ If col == 9 → move to next row (row + 1, col = 0)
+│    ├─ If at end (row == 8 && col == 9) → return true
+│    ├─ If cell is not empty → move to next cell
+│    ├─ For num = 1 to 9:
+│    │    ├─ If isSafe(grid, row, col, num):
+│    │    │    ├─ Place num
+│    │    │    ├─ Recursively solve next cell
+│    │    │    └─ If recursion fails, backtrack (set cell to 0)
+│    └─ If no num fits → return false (backtrack)
+│
+├─▶ isSafe(grid, row, col, num)
+│    ├─ Check row for duplicates
+│    ├─ Check column for duplicates
+│    └─ Check 3x3 box for duplicates
+│
+├─▶ printGrid(grid)
+│    └─ Print all cells of the solved Sudoku
+│
+END 
+
+⏱️ Time Complexity
+The worst-case time complexity is:
+
+O(9^(n)), where n is the number of empty cells.
+Explanation:
+For each empty cell, the solver tries numbers from 1 to 9.
+
+So in the worst case, it may try up to 9 possibilities per empty cell.
+
+Therefore, if there are n empty cells, the total number of combinations is:
+
+𝑂
+(
+9
+𝑛
+)
+O(9 
+n
+ )
+Example: If 50 cells are empty, time complexity becomes 
+9
+50
+9 
+50
+ , which is massive — hence backtracking is not optimal for very sparse puzzles.
+
+🧠 Space Complexity
+O(1) extra space (excluding recursion stack)
+The Sudoku grid is 9x9 and uses a fixed 2D array: O(81) → O(1) (constant space).
+
+Recursive call stack can go as deep as 81 (one for each cell):
+O(depth) = O(81) = O(1) → still constant in big-O.
+
+So:
+
+Auxiliary space: constant
+
+With recursion stack: still O(1) since it’s bounded by 81
+
+-------------------------------------------
+5.3 Crypt Arithmetic
+
+PS:
+Design and implement a C program that solves Cryptarithmetic puzzles involving addition of two words to produce a result word. In such puzzles, each letter represents a unique digit (0–9), and the goal is to find a valid digit-to-letter mapping that satisfies the arithmetic sum of two words
+
+Code: 
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define MAX 10
+#define CHARCOUNT 26
+
+char addend1[20], addend2[20], result[20];
+int map[CHARCOUNT];
+bool used_digits[MAX];
+char unique_chars[CHARCOUNT];
+int unique_count = 0;
+
+// Function to map character to index 0–25
+int get_index(char c)
+{
+    return c - 'A';
+}
+
+// Function to extract all unique characters
+void extract_unique_chars()
+{
+    bool present[CHARCOUNT] = {false};
+
+    int i;
+    for (i = 0; i < strlen(addend1); i++)
+        if (!present[get_index(addend1[i])])
+        {
+            present[get_index(addend1[i])] = true;
+            unique_chars[unique_count++] = addend1[i];
+        }
+
+    for (i = 0; i < strlen(addend2); i++)
+        if (!present[get_index(addend2[i])])
+        {
+            present[get_index(addend2[i])] = true;
+            unique_chars[unique_count++] = addend2[i];
+        }
+
+    for (i = 0; i < strlen(result); i++)
+        if (!present[get_index(result[i])])
+        {
+            present[get_index(result[i])] = true;
+            unique_chars[unique_count++] = result[i];
+        }
+}
+
+// Convert a word to number based on current character-to-digit map
+long get_number(char word[])
+{
+    long num = 0;
+    for (int i = 0; i < strlen(word); i++)
+    {
+        num = num * 10 + map[get_index(word[i])];
+    }
+    return num;
+}
+
+// Ensure no leading zeros in any of the three words
+bool is_leading_zero()
+{
+    return map[get_index(addend1[0])] == 0 || map[get_index(addend2[0])] == 0 || map[get_index(result[0])] == 0;
+}
+
+// Backtracking function to try all valid digit assignments
+bool solve(int idx)
+{
+    if (idx == unique_count)
+    {
+        if (is_leading_zero())
+            return false;
+        long num1 = get_number(addend1);
+        long num2 = get_number(addend2);
+        long sum = get_number(result);
+        return (num1 + num2 == sum);
+    }
+
+    for (int digit = 0; digit <= 9; digit++)
+    {
+        if (!used_digits[digit])
+        {
+            used_digits[digit] = true;
+            map[get_index(unique_chars[idx])] = digit;
+
+            if (solve(idx + 1))
+                return true;
+
+            used_digits[digit] = false;
+        }
+    }
+    return false;
+}
+
+// Main function
+int main()
+{
+    printf("Enter the first word (e.g., SEND): ");
+    scanf("%s", addend1);
+
+    printf("Enter the second word (e.g., MORE): ");
+    scanf("%s", addend2);
+
+    printf("Enter the result word (e.g., MONEY): ");
+    scanf("%s", result);
+
+    // Convert input to uppercase (if needed)
+    for (int i = 0; i < strlen(addend1); i++)
+        addend1[i] = toupper(addend1[i]);
+    for (int i = 0; i < strlen(addend2); i++)
+        addend2[i] = toupper(addend2[i]);
+    for (int i = 0; i < strlen(result); i++)
+        result[i] = toupper(result[i]);
+
+    for (int i = 0; i < CHARCOUNT; i++)
+        map[i] = -1;
+
+    extract_unique_chars();
+
+    if (unique_count > 10)
+    {
+        printf("Too many unique letters. Cannot assign unique digits to each letter.\n");
+        return 1;
+    }
+
+    if (solve(0))
+    {
+        printf("\nSolution Found:\n");
+        for (int i = 0; i < unique_count; i++)
+        {
+            printf("%c = %d\n", unique_chars[i], map[get_index(unique_chars[i])]);
+        }
+        printf("\n%s + %s = %s\n", addend1, addend2, result);
+        printf("%ld + %ld = %ld\n", get_number(addend1), get_number(addend2), get_number(result));
+    }
+    else
+    {
+        printf("No solution found.\n");
+    }
+
+    return 0;
+}
+
+
+
+Theory: 
+🔹 Objective:
+To apply backtracking and constraint satisfaction techniques to solve puzzles with logical reasoning, ensuring that each solution respects mathematical validity and digit uniqueness.
+
+🔹 Constraints:
+Each letter must be replaced with a unique digit between 0 and 9.
+
+No number in the equation can have a leading zero.
+
+The total number of unique letters must not exceed 10 (since there are only 10 digits).
+
+The sum of the numeric forms of WORD1 and WORD2 must be equal to the numeric form of RESULT.
+
+🔹 Input:
+Three words provided by the user:
+
+First addend (e.g., SEND)
+
+Second addend (e.g., MORE)
+
+Result word (e.g., MONEY)
+
+🔹 Output:
+A valid mapping of each letter to a digit.
+
+The corresponding numerical equation (e.g., 9567 + 1085 = 10652).
+
+If no valid solution exists, the program should output:
+"No solution exists for the given cryptarithmetic puzzle." 
+
+Explanations:
+🔍 Function Explanations
+1. int get_index(char c)
+Purpose: Converts a character (A-Z) to an index (0–25).
+
+return c - 'A';
+Used in: Mapping letters to array indices (for map[]).
+
+2. void extract_unique_chars()
+Purpose: Extracts all unique characters from addend1, addend2, and result, and stores them in unique_chars[].
+
+present[]: Flags to avoid duplicate characters.
+
+unique_chars[]: Stores unique characters in order.
+
+unique_count: Counts the number of unique letters.
+
+3. long get_number(char word[])
+Purpose: Converts a word like SEND to a number like 9567 using map[].
+
+Logic:
+
+num = num * 10 + map[letter];
+4. bool is_leading_zero()
+Purpose: Checks whether any word has a leading character mapped to 0 (which is invalid in number format).
+
+Example:
+0123 is invalid → if S = 0 in SEND.
+
+5. bool solve(int idx)
+Purpose: Recursive backtracking function to assign digits to each unique letter.
+
+Steps:
+
+Base case: If all characters assigned (idx == unique_count)
+
+Check for leading zero.
+
+Convert words to numbers.
+
+Return true if sum is valid.
+
+Recursive case:
+
+Try each unused digit (0–9).
+
+Assign to current character.
+
+Recurse to next index.
+
+If it fails, backtrack (unassign digit).
+
+🔠 Variable Explanation
+Variable	Type	Description
+addend1[20]	char[]	First input word (e.g., SEND)
+addend2[20]	char[]	Second input word (e.g., MORE)
+result[20]	char[]	Result word (e.g., MONEY)
+map[26]	int[]	Maps each letter A-Z to a digit (0–9); -1 means unassigned
+used_digits[10]	bool[]	Tracks which digits are already assigned
+unique_chars[26]	char[]	Stores unique characters involved in the puzzle
+unique_count	int	Number of unique characters used in the puzzle
+
+
+🔁 Flow of the Code
+Input:
+
+User enters addend1, addend2, and result.
+
+Preprocessing:
+
+Convert all letters to uppercase.
+
+Initialize map[] to -1 (unassigned).
+
+Extract all unique characters into unique_chars[].
+
+Validation:
+
+If more than 10 unique letters → not solvable.
+
+Backtracking (solve(0)):
+
+Assign digits to characters one by one.
+
+Skip digits already used.
+
+Validate:
+
+No leading zeros.
+
+Sum is correct.
+
+If valid, print the result.
+
+Output:
+
+Display mapping like S = 9, E = 5, etc.
+
+Show numeric addition and result.
+
+
+----------------------------------------------------------------------
+5.4 Graph Colouring
+
+✅ Problem Statement: Graph Coloring Problem
+Given a graph and a number M, determine if it is possible to color the vertices of the graph using at most M colors such that no two adjacent vertices have the same color.
+
+Code:
+#include <stdio.h>
+#include <stdbool.h>
+
+#define MAX 20 // Maximum number of vertices
+
+// Function to print the final color assignment
+void printSolution(int color[], int V)
+{
+    printf("Solution Exists: Following are the assigned colors\n");
+    for (int i = 0; i < V; i++)
+        printf("Vertex %d ---> Color %d\n", i, color[i]);
+}
+
+// Function to check if it's safe to assign color c to vertex v
+bool isSafe(int v, bool graph[MAX][MAX], int color[], int c, int V)
+{
+    for (int i = 0; i < V; i++)
+        if (graph[v][i] && color[i] == c)
+            return false;
+    return true;
+}
+
+// Recursive function to assign colors to vertices
+bool graphColoringUtil(bool graph[MAX][MAX], int m, int color[], int v, int V)
+{
+    if (v == V)
+        return true;
+
+    for (int c = 1; c <= m; c++)
+    {
+        if (isSafe(v, graph, color, c, V))
+        {
+            color[v] = c;
+
+            if (graphColoringUtil(graph, m, color, v + 1, V))
+                return true;
+
+            color[v] = 0; // Backtrack
+        }
+    }
+
+    return false;
+}
+
+// Main function to solve the M-Coloring problem
+bool graphColoring(bool graph[MAX][MAX], int m, int V)
+{
+    int color[MAX];
+    for (int i = 0; i < V; i++)
+        color[i] = 0;
+
+    if (graphColoringUtil(graph, m, color, 0, V) == false)
+    {
+        printf("Solution does not exist\n");
+        return false;
+    }
+
+    printSolution(color, V);
+    return true;
+}
+
+// Driver code
+int main()
+{
+    int V, m;
+    bool graph[MAX][MAX];
+
+    // Take number of vertices
+    printf("Enter the number of vertices: ");
+    scanf("%d", &V);
+
+    // Take number of colors
+    printf("Enter the number of colors: ");
+    scanf("%d", &m);
+
+    // Take the adjacency matrix
+    printf("Enter the adjacency matrix (%dx%d):\n", V, V);
+    for (int i = 0; i < V; i++)
+    {
+        for (int j = 0; j < V; j++)
+        {
+            scanf("%d", (int *)&graph[i][j]);
+        }
+    }
+
+    // Solve the problem
+    graphColoring(graph, m, V);
+    return 0;
+}
+
+
+Theory: 
+
+🔹 Constraints:
+No two adjacent vertices can have the same color.
+
+A maximum of M colors can be used.
+
+Graph is represented using an adjacency matrix.
+
+Backtracking must be used to explore color assignments.
+
+🔹 Input:
+Adjacency matrix of the graph.
+
+Number of colors M.
+
+🔹 Output:
+If coloring is possible: print colors assigned to each vertex.
+
+If not: print "Solution does not exist".
+
+⚙️ Functions Explained
+isSafe(...)
+Checks if assigning a color c to vertex v does not violate the constraint (i.e., no adjacent vertex has the same color).
+
+graphColoringUtil(...)
+Recursive function that tries to assign colors to each vertex. If a solution is found, it returns true; otherwise, it backtracks.
+
+graphColoring(...)
+Initializes colors, starts recursion, and prints the result if possible.
+
+printSolution(...)
+Prints the final color assigned to each vertex.
+
+📊 Variables Used
+Variable	Description
+V	Total number of vertices in the graph (macro #define V 4)
+graph[V][V]	Adjacency matrix representing the graph
+m	Number of colors allowed
+color[V]	Array to store assigned color for each vertex
+v	Current vertex being colored
+c	Current color being tried
+i	Iterator to check all adjacent vertices
+
+🔁 Flow of Execution
+Start from vertex 0.
+
+Try assigning each of the M colors.
+
+For each assignment, check if it’s safe (isSafe).
+
+If safe, assign and recursively try the next vertex.
+
+If a dead-end is reached (no safe color), backtrack.
+
+If all vertices are colored successfully, print the solution.
+-----------------------------------------------
+6. Prolog
+----------------------------------------------
+6.1 Family Tree
+
+Code: 
+% Gender Facts
+male(maloji_bhosale).
+male(shahaji_bhosale).
+male(shivaji_maharaj).
+male(sambhaji).
+male(rajaram).
+male(shahu_i).
+male(ramaraja).
+male(shahu_ii).
+male(baji_rav_i).
+male(balaji_baji_rav).
+male(madhav_rav_i).
+male(narayan_rav).
+male(baji_rav_ii).
+male(raghunath_rav).
+
+female(saibai).
+female(soyarabai).
+female(putalabai).
+female(sagunabai).
+female(kashibai).
+female(lakshmibai).
+female(gunwantabai).
+female(yesubai).
+female(tarabai).
+female(rajasbai).
+female(gangabai).
+female(radhabai).
+female(gopikabai).
+female(ramabai).
+female(anandibai).
+
+% Parent-child relationships
+parent(shahaji_bhosale, shivaji_maharaj).
+parent(shivaji_maharaj, sambhaji).
+parent(shivaji_maharaj, rajaram).
+parent(sambhaji, shahu_i).
+parent(rajaram, shivaji_ii).
+parent(shahu_i, ramaraja).
+parent(ramaraja, shahu_ii).
+parent(maloji_bhosale, shahaji_bhosale).
+parent(baji_rav_i, balaji_baji_rav).
+parent(balaji_baji_rav, madhav_rav_i).
+parent(madhav_rav_i, narayan_rav).
+parent(madhav_rav_i, baji_rav_ii).
+parent(raghunath_rav, baji_rav_ii).
+
+% Marriage facts
+married(shivaji_maharaj, saibai).
+married(shivaji_maharaj, soyarabai).
+married(shivaji_maharaj, putalabai).
+married(shivaji_maharaj, sagunabai).
+married(shivaji_maharaj, kashibai).
+married(shivaji_maharaj, lakshmibai).
+married(shivaji_maharaj, gunwantabai).
+married(sambhaji, yesubai).
+married(rajaram, tarabai).
+married(rajaram, rajasbai).
+married(shahu_i, sagunabai).
+married(shahu_i, lakshmibai).
+married(shahu_i, kashibai).
+married(shahu_i, gangabai).
+married(shahu_i, radhabai).
+married(baji_rav_i, kashibai).
+married(balaji_baji_rav, gopikabai).
+married(madhav_rav_i, ramabai).
+married(raghunath_rav, anandibai).
+
+% Rules for family relationships
+father(X, Y) :- parent(X, Y), male(X).
+mother(X, Y) :- parent(X, Y), female(X).
+grandparent(X, Y) :- parent(X, Z), parent(Z, Y).
+grandfather(X, Y) :- grandparent(X, Y), male(X).
+grandmother(X, Y) :- grandparent(X, Y), female(X).
+sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
+brother(X, Y) :- sibling(X, Y), male(X).
+sister(X, Y) :- sibling(X, Y), female(X).
+uncle(X, Y) :- brother(X, Z), parent(Z, Y).
+aunt(X, Y) :- sister(X, Z), parent(Z, Y).
+cousin(X, Y) :- parent(Z, X), sibling(Z, W), parent(W, Y).
+
+-----------------------------------------------
+6.2 Expert System
+6.2.1 Loan Approval System
+
+
+
+Code:
+% Facts: Define thresholds for approval criteria
+minimum_income(30000). % Minimum annual income in dollars
+minimum_credit_score(650). % Minimum credit score
+maximum_debt_to_income_ratio(0.4). % Maximum debt-to-income ratio
+
+% Loan types and interest rates
+interest_rate(home_loan, 6.5). % Home loan interest rate in percentage
+interest_rate(car_loan, 8.5).  % Car loan interest rate in percentage
+
+% Rules: Determine loan eligibility
+eligible_income(Income) :-
+    minimum_income(MinIncome),
+    Income >= MinIncome.
+
+eligible_credit_score(CreditScore) :-
+    minimum_credit_score(MinCreditScore),
+    CreditScore >= MinCreditScore.
+
+eligible_debt_to_income(Income, Debt) :-
+    DebtToIncome is Debt / Income,
+    maximum_debt_to_income_ratio(MaxRatio),
+    DebtToIncome =< MaxRatio.
+
+loan_approved(Income, EmploymentStatus, CreditScore, Debt) :-
+    eligible_income(Income),
+    eligible_credit_score(CreditScore),
+    eligible_debt_to_income(Income, Debt),
+    EmploymentStatus = employed. % Must be employed
+
+% EMI calculation: EMI = [P × R × (1 + R)^N] / [(1 + R)^N - 1]
+calculate_emi(LoanAmount, Rate, Tenure, EMI) :-
+    MonthlyRate is Rate / (12 * 100), % Convert annual interest rate to monthly
+    PowerFactor is (1 + MonthlyRate) ** Tenure,
+    EMI is LoanAmount * MonthlyRate * PowerFactor / (PowerFactor - 1).
+
+% Ask questions and give a recommendation
+start :-
+    write('Welcome to the Bank Loan Approval System!'), nl,
+    write('Please answer the following questions.'), nl,
+    write('Enter your annual income: '), read(Income),
+    write('Enter your employment status (employed/unemployed): '), read(EmploymentStatus),
+    write('Enter your credit score: '), read(CreditScore),
+    write('Enter your total debt amount: '), read(Debt),
+    (loan_approved(Income, EmploymentStatus, CreditScore, Debt) ->
+        (write('Congratulations! Your loan application is approved.'), nl,
+         write('Please select the type of loan (home_loan/car_loan): '), read(LoanType),
+         interest_rate(LoanType, Rate),
+         write('Enter the loan amount: '), read(LoanAmount),
+         write('Enter the loan tenure (in months): '), read(Tenure),
+         calculate_emi(LoanAmount, Rate, Tenure, EMI),
+         format('Your EMI for the ~w is: $~2f per month.', [LoanType, EMI]), nl);
+        (write('We are sorry, but your loan application is not approved.'), nl)).
+
+% Initialization directive to run the start goal
+:- initialization(start).
+
+6.2.2 Career Guidance
+
+Code: 
+% Helper predicate: Find intersection of two lists
+intersection([], _, []).
+intersection([H|T], List2, [H|Result]) :-
+    member(H, List2),  % Check if H is in List2
+    intersection(T, List2, Result).
+intersection([_|T], List2, Result) :-
+    intersection(T, List2, Result).
+
+% Knowledge Base
+
+% Career paths based on interests and skills
+career(sports, "Professional Athlete or Sports Coach").
+career(arts, "Graphic Designer or Fine Artist").
+career(technology, "Software Developer or Data Scientist").
+career(healthcare, "Doctor or Nurse").
+career(business, "Entrepreneur or Business Analyst").
+career(law, "Lawyer or Legal Consultant").
+career(science, "Research Scientist or Lab Technician").
+career(education, "Teacher or Educational Consultant").
+career(writing, "Author or Content Writer").
+career(music, "Musician or Music Producer").
+career(engineering, "Mechanical, Civil, or Software Engineer").
+career(higher_studies, "Researcher or Academician pursuing advanced degrees").
+career(dance, "Choreographer or Dance Instructor").
+
+
+% Matching interests to categories
+interest_category([sports, fitness], sports).
+interest_category([drawing, painting, design], arts).
+interest_category([coding, technology, problem_solving], technology).
+interest_category([medicine, helping_others, biology], healthcare).
+interest_category([management, leadership, finance], business).
+interest_category([justice, debating, critical_thinking], law).
+interest_category([experiments, curiosity, research], science).
+interest_category([teaching, mentoring, learning], education).
+interest_category([writing, reading, storytelling], writing).
+interest_category([music, singing, composing], music).
+interest_category([engineering, machines, innovation], engineering).
+interest_category([studies, research, academia, knowledge], higher_studies).
+interest_category([dancing,choreography], dance).
+
+
+% Main Predicate
+career_guidance :-
+    write('Welcome to the Career Guidance System!'), nl,
+    write('Please list your interests as a Prolog list, e.g., [coding, painting, fitness]: '), nl,
+    read(Interests),
+    (   find_career(Interests, Career)
+    ->  format('Based on your interests, a potential career path could be: ~s~n', [Career])
+    ;   write('Sorry, we could not determine a suitable career for your interests.'), nl
+    ).
+
+% Helper Predicate: Find the career based on interests
+find_career(Interests, Career) :-
+    interest_category(InterestList, Category),
+    intersection(Interests, InterestList, Matches),
+    Matches \= [],  % Ensure there is at least one match
+    career(Category, Career).
+
+% Entry point
+start :-
+    career_guidance.
+
+% Initialization directive
+:- initialization(start).
+
+6.2.3 Plant Disease
+
+Code:
+:- initialization(main).
+
+% Symptoms 
+symptom(leaf_spots). 
+symptom(yellow_leaves). 
+symptom(wilting). 
+symptom(powdery_substance). 
+symptom(leaf_curling). 
+
+% Environmental Conditions 
+environment(high_humidity). 
+environment(poor_airflow). 
+environment(overwatering). 
+
+% Knowledge Base
+has_symptom(tulsi, powdery_substance). 
+has_symptom(tulsi, leaf_spots). 
+has_symptom(rose, wilting). 
+has_symptom(rose, yellow_leaves). 
+has_symptom(mango, leaf_curling). 
+has_symptom(mango, yellow_leaves). 
+has_symptom(basil, leaf_spots). 
+has_symptom(basil, yellow_leaves). 
+has_environment(tulsi, high_humidity). 
+has_environment(rose, overwatering). 
+has_environment(basil, poor_airflow). 
+
+% Disease Rules 
+at_risk_of_fungal_disease(Plant) :- 
+    has_symptom(Plant, powdery_substance), 
+    has_symptom(Plant, leaf_spots), 
+    has_environment(Plant, high_humidity). 
+
+at_risk_of_bacterial_disease(Plant) :- 
+    has_symptom(Plant, wilting), 
+    has_symptom(Plant, yellow_leaves), 
+    has_environment(Plant, overwatering). 
+
+at_risk_of_viral_disease(Plant) :- 
+    has_symptom(Plant, leaf_curling), 
+    has_symptom(Plant, yellow_leaves), 
+    \+ has_environment(Plant, overwatering). 
+
+% Diagnostic Predicate 
+check_plant_disease(Plant) :- 
+    at_risk_of_fungal_disease(Plant), 
+    write(Plant), write(' is at risk of fungal disease.'), nl. 
+
+check_plant_disease(Plant) :- 
+    at_risk_of_bacterial_disease(Plant), 
+    write(Plant), write(' is at risk of bacterial disease.'), nl. 
+
+check_plant_disease(Plant) :- 
+    at_risk_of_viral_disease(Plant), 
+    write(Plant), write(' is at risk of viral disease.'), nl. 
+
+check_plant_disease(Plant) :- 
+    \+ at_risk_of_fungal_disease(Plant), 
+    \+ at_risk_of_bacterial_disease(Plant), 
+    \+ at_risk_of_viral_disease(Plant), 
+    write(Plant), write(' shows no sign of serious disease.'), nl.
+
+main :- 
+    check_plant_disease(tulsi), 
+    check_plant_disease(rose), 
+    check_plant_disease(mango), 
+    check_plant_disease(basil).
+-------------------------------------------------
+Water Jug Problem 
+Given two jugs with capacities A and B, and a target volume C, you must measure exactly C liters using the allowed operations:
+• Fill any jug.
+• Empty any jug.
+• Pour water from one jug to another.
+
+✅ C CODE WITH BFS and DFS + DETAILED DEBUGGING
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX 1000
+
+typedef struct {
+    int x, y; // x = jug A, y = jug B
+} State;
+
+typedef struct {
+    State states[MAX];
+    int parent[MAX];
+    int front, rear;
+} Queue;
+
+typedef struct {
+    State states[MAX];
+    int top;
+} Stack;
+
+int A, B, TARGET;
+
+// Checks if two states are equal
+int is_same(State a, State b) {
+    return a.x == b.x && a.y == b.y;
+}
+
+// Check if this state has been visited before
+int is_visited(State *visited, int count, State s) {
+    for (int i = 0; i < count; i++) {
+        if (is_same(visited[i], s))
+            return 1;
+    }
+    return 0;
+}
+
+void print_state(State s, int step) {
+    printf("Step %d: Jug A = %d | Jug B = %d\n", step, s.x, s.y);
+}
+
+void print_path(State *path, int length) {
+    for (int i = 0; i <= length; i++) {
+        print_state(path[i], i);
+    }
+}
+
+int is_goal(State s) {
+    return s.x == TARGET || s.y == TARGET;
+}
+
+void bfs() {
+    printf("\n--- BFS START ---\n");
+    Queue q = {0};
+    State visited[MAX];
+    int visited_count = 0;
+
+    State initial = {0, 0};
+    q.states[q.rear] = initial;
+    q.parent[q.rear] = -1;
+    q.rear++;
+    visited[visited_count++] = initial;
+
+    while (q.front < q.rear) {
+        State current = q.states[q.front];
+        int parent = q.parent[q.front];
+        q.front++;
+
+        if (is_goal(current)) {
+            printf("\nGoal reached using BFS!\n");
+            State path[MAX];
+            int index = q.front - 1;
+            int steps = 0;
+            while (index != -1) {
+                path[steps++] = q.states[index];
+                index = q.parent[index];
+            }
+            for (int i = steps - 1; i >= 0; i--)
+                print_state(path[i], steps - 1 - i);
+            return;
+        }
+
+        printf("\nExploring state: Jug A = %d, Jug B = %d\n", current.x, current.y);
+
+        // All possible operations
+        State next_moves[] = {
+            {A, current.y},                  // Fill Jug A
+            {current.x, B},                  // Fill Jug B
+            {0, current.y},                  // Empty Jug A
+            {current.x, 0},                  // Empty Jug B
+            {current.x - (B - current.y) < 0 ? 0 : current.x - (B - current.y),
+             current.y + current.x <= B ? current.y + current.x : B},  // A -> B
+            {current.x + current.y <= A ? current.x + current.y : A,
+             current.y - (A - current.x) < 0 ? 0 : current.y - (A - current.x)}   // B -> A
+        };
+
+        char *move_desc[] = {
+            "Fill Jug A",
+            "Fill Jug B",
+            "Empty Jug A",
+            "Empty Jug B",
+            "Pour Jug A -> Jug B",
+            "Pour Jug B -> Jug A"
+        };
+
+        for (int i = 0; i < 6; i++) {
+            State next = next_moves[i];
+
+            if (!is_visited(visited, visited_count, next)) {
+                printf("Trying move: %s → Result: (%d, %d)\n", move_desc[i], next.x, next.y);
+                visited[visited_count++] = next;
+                q.states[q.rear] = next;
+                q.parent[q.rear] = q.front - 1;
+                q.rear++;
+            } else {
+                printf("Skipping move: %s → Already visited (%d, %d)\n", move_desc[i], next.x, next.y);
+            }
+        }
+    }
+    printf("No solution found using BFS.\n");
+}
+
+void dfs_util(Stack *s, State *visited, int *visited_count) {
+    while (s->top != -1) {
+        State current = s->states[s->top--];
+
+        if (is_goal(current)) {
+            printf("\nGoal reached using DFS!\n");
+            visited[(*visited_count)++] = current;
+            print_path(visited, *visited_count - 1);
+            return;
+        }
+
+        if (is_visited(visited, *visited_count, current)) {
+            continue;
+        }
+
+        visited[(*visited_count)++] = current;
+        printf("\nExploring state: Jug A = %d, Jug B = %d\n", current.x, current.y);
+
+        State next_moves[] = {
+            {A, current.y}, {current.x, B},
+            {0, current.y}, {current.x, 0},
+            {current.x - (B - current.y) < 0 ? 0 : current.x - (B - current.y),
+             current.y + current.x <= B ? current.y + current.x : B},
+            {current.x + current.y <= A ? current.x + current.y : A,
+             current.y - (A - current.x) < 0 ? 0 : current.y - (A - current.x)}
+        };
+
+        char *move_desc[] = {
+            "Fill Jug A",
+            "Fill Jug B",
+            "Empty Jug A",
+            "Empty Jug B",
+            "Pour Jug A -> Jug B",
+            "Pour Jug B -> Jug A"
+        };
+
+        for (int i = 5; i >= 0; i--) { // Reverse order to simulate stack (DFS)
+            State next = next_moves[i];
+            if (!is_visited(visited, *visited_count, next)) {
+                printf("Pushing move: %s → Result: (%d, %d)\n", move_desc[i], next.x, next.y);
+                s->states[++s->top] = next;
+            } else {
+                printf("Skipping move: %s → Already visited (%d, %d)\n", move_desc[i], next.x, next.y);
+            }
+        }
+    }
+
+    printf("No solution found using DFS.\n");
+}
+
+void dfs() {
+    printf("\n--- DFS START ---\n");
+    Stack s = {0};
+    s.top = 0;
+    s.states[0] = (State){0, 0};
+
+    State visited[MAX];
+    int visited_count = 0;
+
+    dfs_util(&s, visited, &visited_count);
+}
+
+int main() {
+    printf("Enter capacity of Jug A: ");
+    scanf("%d", &A);
+    printf("Enter capacity of Jug B: ");
+    scanf("%d", &B);
+    printf("Enter target amount: ");
+    scanf("%d", &TARGET);
+
+    bfs();
+    dfs();
+
+    return 0;
+}
+
+🔍 EXPLANATION OF KEY DEBUGGING PRINTS:
+• "Exploring state...": Shows the current jug levels being evaluated.
+• "Trying move...": Explains what operation is being attempted and its result.
+• "Skipping move...": Indicates the operation leads to a previously visited state.
+• "Pushing move...": For DFS, shows new states added to the stack.
+• "Goal reached": Indicates success and shows the path.
+
+✅ SAMPLE INPUT
+Enter capacity of Jug A: 4
+Enter capacity of Jug B: 3
+Enter target amount: 2
+✅ OUTPUT SNAPSHOT (truncated)
+Exploring state: Jug A = 0, Jug B = 0
+Trying move: Fill Jug A → Result: (4, 0)
+Trying move: Fill Jug B → Result: (0, 3)
+...
+Goal reached using BFS!
+Step 0: Jug A = 0 | Jug B = 0
+Step 1: Jug A = 0 | Jug B = 3
+Step 2: Jug A = 3 | Jug B = 0
+Step 3: Jug A = 3 | Jug B = 3
+Step 4: Jug A = 4 | Jug B = 2
+
+Absolutely, Jatin! Here's a complete walkthrough of the C code solving the Water Jug Problem using BFS and DFS — including function explanations, code flow, and a dry run with a real input example.
+
+🔧 FUNCTION-BY-FUNCTION EXPLANATION
+✅ is_same(State a, State b)
+Purpose: Checks if two jug states (A, B) are the same.
+Used in: Comparing current state with goal or visited states.
+
+✅ is_visited(State *visited, int count, State s)
+Purpose: Checks if the current state has already been visited.
+Logic: Loops through all visited states and calls is_same().
+
+✅ print_state(State s, int step)
+Purpose: Prints the state of the jugs (A and B) at a specific step.
+
+✅ print_path(State *path, int length)
+Purpose: Prints the sequence of states (solution path).
+
+✅ is_goal(State s)
+Purpose: Checks if the goal (either jug has TARGET liters) is reached.
+
+✅ bfs()
+Purpose: Implements Breadth-First Search to find the shortest path to the target.
+Flow:
+1. Initialize the queue with the starting state (0, 0).
+2. Loop while queue is not empty:
+o Dequeue state.
+o If it's the goal → print path.
+o Generate all 6 possible moves from the current state:
+• Fill A, Fill B, Empty A, Empty B
+• Pour A → B, Pour B → A
+o If a resulting state hasn’t been visited → enqueue it.
+3. Use parent[] array to backtrack the solution path once the goal is found.
+
+✅ dfs_util(Stack *s, State *visited, int *visited_count)
+Purpose: Recursively explores all paths using a stack-based DFS.
+Flow:
+1. Pop a state from the stack.
+2. If it's the goal → print path.
+3. Else, push all valid, unvisited next states to the stack (in reverse order).
+
+✅ dfs()
+Purpose: Initializes and calls the DFS utility function.
+
+✅ main()
+Purpose: Takes user input for jug capacities and target, and calls BFS and DFS.
+
+🔁 FLOW OF THE CODE
+1. User inputs A, B, and TARGET.
+2. BFS is run:
+o Finds the shortest path to get exactly TARGET liters in either jug.
+o Prints the move-by-move explanation.
+3. DFS is run:
+o Finds any valid path (may not be the shortest).
+o Prints detailed state transitions and decisions.
+
+🧪 DRY RUN EXAMPLE
+💡 INPUT
+Jug A: 4
+Jug B: 3
+Target: 2
+✅ BFS DRY RUN
+Initial state: (0, 0)
+Step 0: (0, 0)
+- Try Fill A: (4, 0)
+- Try Fill B: (0, 3)
+
+Step 1: (4, 0)
+- Pour A → B: (1, 3)
+- Empty A: (0, 0) → already visited
+
+Step 2: (0, 3)
+- Pour B → A: (3, 0)
+
+Step 3: (1, 3)
+- Pour B → A: (4, 0) → already visited
+- Empty B: (1, 0)
+
+Step 4: (3, 0)
+- Fill B: (3, 3)
+- Pour A → B: (0, 3)
+
+Step 5: (3, 3)
+- Pour A → B: (4, 2) → ✅ Target reached (B = 2)
+🔄 Final BFS Path:
+(0, 0)
+→ (0, 3)         // Fill Jug B
+→ (3, 0)         // Pour B → A
+→ (3, 3)         // Fill Jug B
+→ (4, 2)         // Pour B → A → Goal!
+
+✅ DFS DRY RUN (One Possible Path)
+Stack path (order may vary):
+(0, 0)
+→ (4, 0)
+→ (1, 3)
+→ (1, 0)
+→ (0, 1)
+→ (0, 0) → visited
+...
+Eventually → (4, 2) → Goal!
+Note: DFS can go deeper into the tree and revisit dead ends, but still finds a solution.
+
+🧠 WHY BFS VS DFS?
+Feature
+BFS
+DFS
+Path Found
+Shortest
+Any valid
+Memory
+More (queue, parent array)
+Less (stack)
+Speed
+Slower for big trees
+Faster sometimes, but may loop
+Debuggability
+Easier to trace
+Can revisit more states
+
+Here's a single C program that allows the user to select either DFS or BFS to solve the 8-puzzle problem, and provides detailed debugging print statements explaining every decision made in the process — including move attempts, reason for skipping, and goal checking.
+
+ 8-Puzzle: Unified DFS & BFS Code 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SIZE 3
+#define MAX_NODES 10000
+#define MAX_DEPTH 20
+
+typedef struct {
+    int tiles[SIZE][SIZE];
+    int x, y; // position of blank (0)
+    int depth;
+} Node;
+
+typedef struct {
+    Node nodes[MAX_NODES];
+    int front, rear;
+} Queue;
+
+int directions[4][2] = {{-1,0},{1,0},{0,-1},{0,1}}; // Up, Down, Left, Right
+char *dir_name[] = {"Up", "Down", "Left", "Right"};
+
+Node goal = {{{1,2,3},{4,5,6},{7,8,0}}, 2, 2, 0};
+
+// Function to check if two puzzle states are the same
+int is_same(Node *a, Node *b) {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (a->tiles[i][j] != b->tiles[i][j])
+                return 0;
+    return 1;
+}
+
+// Function to check if goal state is reached
+int is_goal(Node *n) {
+    return is_same(n, &goal);
+}
+
+// Function to print a puzzle state
+void print_node(Node *n, int step) {
+    printf("\nStep %d (Depth %d):\n", step, n->depth);
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++)
+            printf("%d ", n->tiles[i][j]);
+        printf("\n");
+    }
+}
+
+// Function to check if a node has already been visited
+int is_visited(Node visited[], int count, Node *n) {
+    for (int i = 0; i < count; i++)
+        if (is_same(&visited[i], n))
+            return 1;
+    return 0;
+}
+
+// Enqueue operation for BFS
+void enqueue(Queue *q, Node n) {
+    q->nodes[q->rear++] = n;
+}
+
+// Dequeue operation for BFS
+Node dequeue(Queue *q) {
+    return q->nodes[q->front++];
+}
+
+// BFS Solver
+void solve_bfs(Node start) {
+    printf("\nStarting BFS...\n");
+
+    Queue q = {0};
+    Node visited[MAX_NODES];
+    int visit_count = 0;
+    int step = 0;
+
+    enqueue(&q, start);
+    visited[visit_count++] = start;
+
+    while (q.front < q.rear) {
+        Node current = dequeue(&q);
+        print_node(&current, step++);
+
+        if (is_goal(&current)) {
+            printf("Goal state reached using BFS!\n");
+            return;
+        }
+
+        for (int d = 0; d < 4; d++) {
+            int new_x = current.x + directions[d][0];
+            int new_y = current.y + directions[d][1];
+
+            if (new_x >= 0 && new_x < SIZE && new_y >= 0 && new_y < SIZE) {
+                Node next = current;
+                next.tiles[current.x][current.y] = next.tiles[new_x][new_y];
+                next.tiles[new_x][new_y] = 0;
+                next.x = new_x;
+                next.y = new_y;
+                next.depth = current.depth + 1;
+
+                printf("Attempting move %s...\n", dir_name[d]);
+
+                if (!is_visited(visited, visit_count, &next)) {
+                    printf("Move is valid and new. Adding to queue.\n");
+                    enqueue(&q, next);
+                    visited[visit_count++] = next;
+                } else {
+                    printf("State already visited. Skipping this move.\n");
+                }
+            } else {
+                printf("Move %s goes out of bounds. Skipping.\n", dir_name[d]);
+            }
+        }
+    }
+
+    printf("BFS could not find a solution within the given node limit.\n");
+}
+
+// DFS Solver (Recursive)
+int solve_dfs(Node current, Node visited[], int depth) {
+    print_node(&current, depth);
+
+    if (is_goal(&current)) {
+        printf("Goal state reached using DFS!\n");
+        return 1;
+    }
+
+    if (depth > MAX_DEPTH) {
+        printf("Max depth reached. Backtracking...\n");
+        return 0;
+    }
+
+    visited[depth] = current;
+
+    for (int d = 0; d < 4; d++) {
+        int new_x = current.x + directions[d][0];
+        int new_y = current.y + directions[d][1];
+
+        if (new_x >= 0 && new_x < SIZE && new_y >= 0 && new_y < SIZE) {
+            Node next = current;
+            next.tiles[current.x][current.y] = next.tiles[new_x][new_y];
+            next.tiles[new_x][new_y] = 0;
+            next.x = new_x;
+            next.y = new_y;
+            next.depth = current.depth + 1;
+
+            printf("Trying move %s at depth %d...\n", dir_name[d], depth + 1);
+
+            int cycle = 0;
+            for (int i = 0; i <= depth; i++) {
+                if (is_same(&visited[i], &next)) {
+                    printf("Cycle detected with earlier state. Skipping move %s.\n", dir_name[d]);
+                    cycle = 1;
+                    break;
+                }
+            }
+
+            if (!cycle) {
+                if (solve_dfs(next, visited, depth + 1))
+                    return 1;
+            }
+        } else {
+            printf("Move %s goes out of bounds. Skipping.\n", dir_name[d]);
+        }
+    }
+
+    printf("All directions tried from this node. Backtracking...\n");
+    return 0;
+}
+
+int main() {
+    Node start;
+    int choice;
+
+    printf("Enter the initial 8-puzzle configuration (use 0 for blank):\n");
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++) {
+            scanf("%d", &start.tiles[i][j]);
+            if (start.tiles[i][j] == 0) {
+                start.x = i;
+                start.y = j;
+            }
+        }
+    start.depth = 0;
+
+    printf("\nChoose algorithm:\n1. BFS\n2. DFS\nEnter choice: ");
+    scanf("%d", &choice);
+
+    if (choice == 1) {
+        solve_bfs(start);
+    } else if (choice == 2) {
+        Node visited[MAX_DEPTH + 1];
+        if (!solve_dfs(start, visited, 0))
+            printf("DFS could not find solution within depth limit.\n");
+    } else {
+        printf("Invalid choice.\n");
+    }
+
+    return 0;
+}
+
+🔍 Code Behavior Summary:
+• BFS explores all states level-by-level using a queue.
+• DFS explores deep paths first using recursion and backtracking.
+• Print statements explain:
+o What move is being tried (up/down/left/right).
+o Why a move is skipped (out-of-bounds or visited).
+o When a cycle is detected.
+o When we backtrack due to depth or dead-end.
+
+Let's break down the unified DFS & BFS 8-puzzle solver code you received. It solves the 8-puzzle problem using either BFS (Breadth-First Search) or DFS (Depth-First Search) based on user choice, with detailed debug print statements.
+
+✅ FUNCTION-BY-FUNCTION EXPLANATION
+
+is_same(Node *a, Node *b)
+Purpose: Compares two puzzle states tile-by-tile.
+Returns: 1 if the states are identical, 0 otherwise.
+
+is_goal(Node *n)
+Purpose: Checks if the current node matches the goal state (1-2-3 | 4-5-6 | 7-8-0).
+Returns: 1 if goal state is reached.
+
+print_node(Node *n, int step)
+Purpose: Prints the current puzzle configuration and its depth (for traceability).
+
+is_visited(Node visited[], int count, Node *n)
+Purpose: Prevents revisiting already explored puzzle states.
+Returns: 1 if the state has been visited.
+
+enqueue and dequeue
+Purpose: Manage the queue used in BFS:
+• enqueue adds a node to the back.
+• dequeue retrieves the front node.
+
+solve_bfs(Node start)
+Purpose: Uses Breadth-First Search to explore states level by level.
+How it works:
+1. Start from the initial state.
+2. For each direction (up, down, left, right), generate a new state.
+3. If the state hasn't been visited and is within bounds, enqueue it.
+4. Repeat until the goal is reached or the queue is empty.
+Debug prints:
+• Each move is printed with its direction.
+• If a move is out-of-bounds or already visited, it's explicitly mentioned.
+
+solve_dfs(Node current, Node visited[], int depth)
+Purpose: Uses Depth-First Search recursively to go deep into the state tree.
+How it works:
+1. At each node, recursively try each direction.
+2. Check for cycles to avoid infinite loops.
+3. Backtrack when depth exceeds max allowed or no valid child exists.
+Debug prints:
+• Shows each move direction and reason for skipping.
+• Indicates backtracking and depth.
+
+main()
+Purpose: Entry point of the program.
+Flow:
+1. Read initial puzzle configuration from the user.
+2. Ask user to choose between BFS and DFS.
+3. Call the respective solver.
+
+🧪 DRY RUN WITH EXAMPLE
+Let’s walk through a dry run with the following starting state (0 = blank):
+1 2 3
+4 0 6
+7 5 8
+User selects BFS.
+
+Step 0:
+Initial state is:
+1 2 3
+4 0 6
+7 5 8
+• Blank tile is at (1,1) (center).
+• Possible moves: Up, Down, Left, Right
+
+Trying move Up:
+Swap 0 with tile at (0,1) → 2
+New state:
+1 0 3
+4 2 6
+7 5 8
+• Not visited → Added to queue
+
+Trying move Down:
+Swap 0 with (2,1) → 5
+New state:
+1 2 3
+4 5 6
+7 0 8
+• Not visited → Added to queue
+
+Trying move Left:
+Swap 0 with (1,0) → 4
+New state:
+1 2 3
+0 4 6
+7 5 8
+• Not visited → Added to queue
+
+Trying move Right:
+Swap 0 with (1,2) → 6
+New state:
+1 2 3
+4 6 0
+7 5 8
+• Not visited → Added to queue
+
+Step 1:
+Dequeues the first state:
+1 0 3
+4 2 6
+7 5 8
+Repeat the same move analysis, add new unique states to queue.
+
+Eventually, this continues level-by-level (in BFS) or deep-first (in DFS) until we reach:
+1 2 3
+4 5 6
+7 8 0
+At this point:
+• is_goal returns 1
+• "Goal state reached!" is printed
+• Execution stops.
+
+🔁 CONTRAST: DFS VS BFS
+Aspect
+BFS
+DFS
+Strategy
+Explores breadth (level by level)
+Explores depth (go deep first)
+Memory Usage
+Higher (queue stores many states)
+Lower (stack-like recursion)
+Time to Goal
+Usually shorter path
+May find longer/deeper path
+Avoids Cycles
+Yes (via visited[])
+Yes (via visited[] or path check)
+✅ Summary
+This code lets you:
+• Input any 8-puzzle state
+• Choose DFS or BFS
+• See every move and decision printed live
+• Understand why certain states are skipped
+
+Missionaries and Cannibals problem. 
+The program:
+• Accepts any number of missionaries, cannibals, and boat capacity.
+• Performs both BFS and DFS.
+• Includes detailed debugging print statements explaining:
+o Why a move is attempted.
+o Whether it is valid or invalid.
+o Whether a state is revisited or leads to a solution.
+
+✅ Combined BFS and DFS Code with Explanation
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_STATES 1000
+
+typedef struct {
+    int m_left, c_left, boat; // 0 = left, 1 = right
+    int m_right, c_right;
+} State;
+
+typedef struct {
+    State states[MAX_STATES];
+    int parent[MAX_STATES];
+    int front, rear;
+} Queue;
+
+typedef struct {
+    State states[MAX_STATES];
+    int top;
+} Stack;
+
+int TOTAL_M, TOTAL_C, BOAT_CAPACITY;
+
+// Function to compare states
+int is_same(State a, State b) {
+    return a.m_left == b.m_left && a.c_left == b.c_left && a.boat == b.boat &&
+           a.m_right == b.m_right && a.c_right == b.c_right;
+}
+
+// Check if state is valid
+int is_valid(State s) {
+    if (s.m_left < 0 || s.c_left < 0 || s.m_right < 0 || s.c_right < 0)
+        return 0;
+    if ((s.m_left > 0 && s.m_left < s.c_left) || (s.m_right > 0 && s.m_right < s.c_right))
+        return 0;
+    if (s.m_left > TOTAL_M || s.c_left > TOTAL_C || s.m_right > TOTAL_M || s.c_right > TOTAL_C)
+        return 0;
+    return 1;
+}
+
+// Check if goal state
+int is_goal(State s) {
+    return s.m_left == 0 && s.c_left == 0 && s.boat == 1;
+}
+
+// Check if state is visited
+int is_visited(State *visited, int count, State s) {
+    for (int i = 0; i < count; i++) {
+        if (is_same(visited[i], s))
+            return 1;
+    }
+    return 0;
+}
+
+void print_state(State s, int step) {
+    printf("Step %d: Left Side: %dM %dC | Right Side: %dM %dC | Boat is on %s\n",
+           step, s.m_left, s.c_left, s.m_right, s.c_right,
+           s.boat ? "Right" : "Left");
+}
+
+void print_path(State *states, int *parent, int index) {
+    if (index == -1) return;
+    print_path(states, parent, parent[index]);
+    static int step = 0;
+    print_state(states[index], step++);
+}
+
+// BFS Implementation
+void bfs() {
+    printf("\n--- Starting BFS ---\n");
+    Queue q = {0};
+    State visited[MAX_STATES];
+    int visited_count = 0;
+
+    State initial = {TOTAL_M, TOTAL_C, 0, 0, 0};
+    q.states[q.rear] = initial;
+    q.parent[q.rear] = -1;
+    q.rear++;
+    visited[visited_count++] = initial;
+
+    while (q.front != q.rear) {
+        State current = q.states[q.front];
+        int parent_index = q.parent[q.front];
+        q.front++;
+
+        if (is_goal(current)) {
+            printf("Goal reached using BFS.\n");
+            print_path(q.states, q.parent, q.front - 1);
+            print_state(current, visited_count);
+            return;
+        }
+
+        printf("\nExploring State:\n");
+        print_state(current, visited_count);
+
+        for (int m = 0; m <= BOAT_CAPACITY; m++) {
+            for (int c = 0; c <= BOAT_CAPACITY; c++) {
+                if (m + c == 0 || m + c > BOAT_CAPACITY)
+                    continue;
+
+                State next;
+                if (current.boat == 0) {
+                    printf("Trying move: Send %dM %dC from Left to Right\n", m, c);
+                    next.m_left = current.m_left - m;
+                    next.c_left = current.c_left - c;
+                    next.m_right = current.m_right + m;
+                    next.c_right = current.c_right + c;
+                    next.boat = 1;
+                } else {
+                    printf("Trying move: Send %dM %dC from Right to Left\n", m, c);
+                    next.m_left = current.m_left + m;
+                    next.c_left = current.c_left + c;
+                    next.m_right = current.m_right - m;
+                    next.c_right = current.c_right - c;
+                    next.boat = 0;
+                }
+
+                if (!is_valid(next)) {
+                    printf("Invalid move: missionaries would be outnumbered or counts invalid\n");
+                    continue;
+                }
+
+                if (is_visited(visited, visited_count, next)) {
+                    printf("Move leads to already visited state. Skipping.\n");
+                    continue;
+                }
+
+                printf("Valid move. Enqueuing new state.\n");
+                q.states[q.rear] = next;
+                q.parent[q.rear] = q.front - 1;
+                q.rear++;
+                visited[visited_count++] = next;
+            }
+        }
+    }
+
+    printf("No solution found using BFS.\n");
+}
+
+// DFS Utility
+void dfs_util(Stack *s, State *visited, int *visited_count, State *path, int *path_index) {
+    while (s->top >= 0) {
+        State current = s->states[s->top--];
+
+        path[(*path_index)++] = current;
+        visited[(*visited_count)++] = current;
+
+        if (is_goal(current)) {
+            printf("Goal reached using DFS.\n");
+            for (int i = 0; i < *path_index; i++) {
+                print_state(path[i], i);
+            }
+            return;
+        }
+
+        for (int m = BOAT_CAPACITY; m >= 0; m--) {
+            for (int c = BOAT_CAPACITY; c >= 0; c--) {
+                if (m + c == 0 || m + c > BOAT_CAPACITY)
+                    continue;
+
+                State next;
+                if (current.boat == 0) {
+                    printf("Trying move: Send %dM %dC from Left to Right\n", m, c);
+                    next.m_left = current.m_left - m;
+                    next.c_left = current.c_left - c;
+                    next.m_right = current.m_right + m;
+                    next.c_right = current.c_right + c;
+                    next.boat = 1;
+                } else {
+                    printf("Trying move: Send %dM %dC from Right to Left\n", m, c);
+                    next.m_left = current.m_left + m;
+                    next.c_left = current.c_left + c;
+                    next.m_right = current.m_right - m;
+                    next.c_right = current.c_right - c;
+                    next.boat = 0;
+                }
+
+                if (!is_valid(next)) {
+                    printf("Invalid move: missionaries would be outnumbered or counts invalid\n");
+                    continue;
+                }
+
+                if (is_visited(visited, *visited_count, next)) {
+                    printf("Already visited this state in DFS. Skipping.\n");
+                    continue;
+                }
+
+                printf("Valid move. Pushing to stack.\n");
+                s->states[++s->top] = next;
+            }
+        }
+
+        (*path_index)--;
+    }
+
+    printf("No solution found using DFS.\n");
+}
+
+// DFS Driver
+void dfs() {
+    printf("\n--- Starting DFS ---\n");
+    Stack s = {0};
+    State visited[MAX_STATES], path[MAX_STATES];
+    int visited_count = 0, path_index = 0;
+
+    State initial = {TOTAL_M, TOTAL_C, 0, 0, 0};
+    s.states[s.top++] = initial;
+
+    dfs_util(&s, visited, &visited_count, path, &path_index);
+}
+
+int main() {
+    printf("Enter number of Missionaries: ");
+    scanf("%d", &TOTAL_M);
+    printf("Enter number of Cannibals: ");
+    scanf("%d", &TOTAL_C);
+    printf("Enter boat capacity: ");
+    scanf("%d", &BOAT_CAPACITY);
+
+    bfs();
+    dfs();
+
+    return 0;
+}
+
+✅ EXAMPLE RUN
+Input:
+Enter number of Missionaries: 3
+Enter number of Cannibals: 3
+Enter boat capacity: 2
+The output will show:
+• Every move attempted.
+• Why a move is considered or rejected.
+• How BFS/DFS explore the state space.
+• Final step-by-step solution path if found.
+
+---------------------------------------------------------------------------------------
+
+Tic Tac Toe program in C with a simple rule-based AI
+ that plays as O. The AI's moves are based on fixed rules such as:
+• Win if possible.
+• Block opponent's immediate win.
+• Take the center if free.
+• Take any corner if free.
+• Take any side if free.
+The program includes detailed print statements to explain every decision and the current board state.
+
+#include <stdio.h>
+
+#define SIZE 3
+
+char board[SIZE][SIZE];
+
+// Initialize board with empty spaces
+void init_board() {
+    for(int i = 0; i < SIZE; i++)
+        for(int j = 0; j < SIZE; j++)
+            board[i][j] = ' ';
+}
+
+// Print current board
+void print_board() {
+    printf("\nCurrent board:\n");
+    for(int i = 0; i < SIZE; i++) {
+        for(int j = 0; j < SIZE; j++) {
+            printf(" %c ", board[i][j]);
+            if (j < SIZE - 1) printf("|");
+        }
+        printf("\n");
+        if (i < SIZE - 1) printf("---+---+---\n");
+    }
+}
+
+// Check if a player has won
+int check_win(char player) {
+    // Rows and Columns
+    for(int i = 0; i < SIZE; i++) {
+        if(board[i][0] == player && board[i][1] == player && board[i][2] == player)
+            return 1;
+        if(board[0][i] == player && board[1][i] == player && board[2][i] == player)
+            return 1;
+    }
+    // Diagonals
+    if(board[0][0] == player && board[1][1] == player && board[2][2] == player)
+        return 1;
+    if(board[0][2] == player && board[1][1] == player && board[2][0] == player)
+        return 1;
+
+    return 0;
+}
+
+// Check if board is full (draw)
+int is_draw() {
+    for(int i = 0; i < SIZE; i++)
+        for(int j = 0; j < SIZE; j++)
+            if(board[i][j] == ' ')
+                return 0;
+    return 1;
+}
+
+// Check if move is valid
+int is_valid_move(int row, int col) {
+    if(row < 0 || row >= SIZE || col < 0 || col >= SIZE) return 0;
+    return board[row][col] == ' ';
+}
+
+// Place a move on board
+void place_move(int row, int col, char player) {
+    board[row][col] = player;
+}
+
+// Try to find winning move for player, return 1 and coordinates via pointers if found
+int find_winning_move(char player, int *move_row, int *move_col) {
+    for(int i = 0; i < SIZE; i++) {
+        for(int j = 0; j < SIZE; j++) {
+            if(board[i][j] == ' ') {
+                board[i][j] = player;
+                if(check_win(player)) {
+                    board[i][j] = ' '; // revert
+                    *move_row = i;
+                    *move_col = j;
+                    return 1;
+                }
+                board[i][j] = ' '; // revert
+            }
+        }
+    }
+    return 0;
+}
+
+// AI move based on fixed rules
+void ai_move() {
+    int row, col;
+
+    printf("\nAI is deciding its move...\n");
+
+    // 1. Win if possible
+    if(find_winning_move('O', &row, &col)) {
+        printf("AI found a winning move at (%d, %d).\n", row + 1, col + 1);
+        place_move(row, col, 'O');
+        return;
+    }
+    printf("No winning move found for AI.\n");
+
+    // 2. Block opponent's winning move
+    if(find_winning_move('X', &row, &col)) {
+        printf("AI found opponent's winning move at (%d, %d), blocking it.\n", row + 1, col + 1);
+        place_move(row, col, 'O');
+        return;
+    }
+    printf("No immediate threat from opponent found.\n");
+
+    // 3. Take center if free
+    if(is_valid_move(1,1)) {
+        printf("AI takes the center at (2, 2).\n");
+        place_move(1,1,'O');
+        return;
+    }
+    printf("Center is occupied.\n");
+
+    // 4. Take any corner if free
+    int corners[4][2] = {{0,0},{0,2},{2,0},{2,2}};
+    for(int i = 0; i < 4; i++) {
+        row = corners[i][0];
+        col = corners[i][1];
+        if(is_valid_move(row,col)) {
+            printf("AI takes corner at (%d, %d).\n", row + 1, col + 1);
+            place_move(row,col,'O');
+            return;
+        }
+    }
+    printf("No corners available.\n");
+
+    // 5. Take any side if free
+    int sides[4][2] = {{0,1},{1,0},{1,2},{2,1}};
+    for(int i = 0; i < 4; i++) {
+        row = sides[i][0];
+        col = sides[i][1];
+        if(is_valid_move(row,col)) {
+            printf("AI takes side at (%d, %d).\n", row + 1, col + 1);
+            place_move(row,col,'O');
+            return;
+        }
+    }
+    printf("No moves left for AI, board full or no valid spaces.\n");
+}
+
+// Main game loop
+void play_game() {
+    init_board();
+    print_board();
+
+    char current_player = 'X'; // Player always starts
+    int row, col;
+
+    while(1) {
+        if(current_player == 'X') {
+            // Human player's turn
+            printf("\nYour move (X). Enter row and column (1-3 each): ");
+            scanf("%d%d", &row, &col);
+            row--; col--; // zero-based indexing
+
+            if(!is_valid_move(row, col)) {
+                printf("Invalid move at (%d, %d). Try again.\n", row+1, col+1);
+                continue;
+            }
+
+            place_move(row, col, 'X');
+            printf("You placed X at (%d, %d).\n", row+1, col+1);
+            print_board();
+
+            if(check_win('X')) {
+                printf("Congratulations! You (X) have won!\n");
+                break;
+            }
+            if(is_draw()) {
+                printf("It's a draw!\n");
+                break;
+            }
+            current_player = 'O';
+        } else {
+            // AI's turn
+            ai_move();
+            print_board();
+
+            if(check_win('O')) {
+                printf("AI (O) wins! Better luck next time.\n");
+                break;
+            }
+            if(is_draw()) {
+                printf("It's a draw!\n");
+                break;
+            }
+            current_player = 'X';
+        }
+    }
+}
+
+int main() {
+    printf("Welcome to Tic Tac Toe!\nYou play as X, AI plays as O.\n");
+    play_game();
+    return 0;
+}
+
+How this works step-by-step:
+1. Initialization: Empty board is created.
+2. Human Player (X): Inputs row and column to place their mark.
+o Invalid moves are rejected with an explanation.
+3. AI Player (O): Uses fixed rule logic to decide move.
+o First tries to win immediately.
+o Then tries to block player’s immediate winning move.
+o Then takes center if free.
+o Then takes a corner.
+o Then takes any side.
+4. After each move, the board is printed and the program checks for a win or draw.
+5. Game continues until win or draw.
+
+Sample debug output snippet:
+Your move (X). Enter row and column (1-3 each): 1 1
+You placed X at (1, 1).
+
+Current board:
+ X |   |  
+---+---+---
+   |   |  
+---+---+---
+   |   |  
+
+AI is deciding its move...
+No winning move found for AI.
+No immediate threat from opponent found.
+AI takes the center at (2, 2).
+
+Current board:
+ X |   |  
+---+---+---
+   | O |  
+---+---+---
+   |   |  
+
+Absolutely! Here's a detailed explanation of the Tic Tac Toe code provided, including what each function does, the overall flow, and a dry run example.
+
+Explanation of Each Function
+1. init_board()
+• Initializes the 3x3 board by filling every cell with a space ' '.
+• Sets up a fresh empty board before the game starts.
+2. print_board()
+• Prints the current state of the board in a readable 3x3 grid format.
+• Shows the positions of X, O, and empty spaces.
+• Helps visualize the game at every step.
+3. check_win(char player)
+• Checks if the specified player ('X' or 'O') has won the game.
+• Checks all rows, columns, and diagonals for three identical marks.
+• Returns 1 if player has won, else 0.
+4. is_draw()
+• Checks if the board is full (no empty cells).
+• If full and no winner, it’s a draw.
+• Returns 1 for draw, 0 otherwise.
+5. is_valid_move(int row, int col)
+• Validates whether a move to (row, col) is within the board and is empty.
+• Returns 1 if move is valid, else 0.
+6. place_move(int row, int col, char player)
+• Places the player's mark ('X' or 'O') on the board at (row, col).
+7. find_winning_move(char player, int *move_row, int *move_col)
+• Tries all empty positions by placing the player’s mark temporarily.
+• If placing the mark results in a win, it returns that move’s position via pointers.
+• Returns 1 if a winning move is found, else 0.
+• Used for AI to find immediate win or block opponent.
+8. ai_move()
+• Implements the AI logic for making a move based on simple fixed rules:
+1. Try to win immediately.
+2. Block the opponent if they are about to win.
+3. Take the center if free.
+4. Take any available corner.
+5. Take any available side.
+• Each step prints detailed debugging info explaining what the AI is trying and why.
+• Calls place_move() to finalize AI's chosen move.
+9. play_game()
+• Main loop managing turns for player (X) and AI (O).
+• Initializes board, alternates turns, and gets input from the user.
+• After each move, checks for win/draw and prints board.
+• Prints detailed feedback on invalid moves and final results.
+
+Overall Flow of the Code
+1. Initialize an empty Tic Tac Toe board.
+2. The player (X) goes first. Prompt user input for row/column.
+3. Validate and place the player's move.
+4. Check if the player has won or if the game is drawn.
+5. If game continues, AI (O) computes its move using ai_move() and places it.
+6. Check if AI has won or if the game is drawn.
+7. Repeat steps 2–6 until the game ends with a win or draw.
+8. Print final results and exit.
+
+Dry Run Example
+Let's dry run a few moves for clarity.
+
+Initial board (empty):
+   |   |   
+---+---+---
+   |   |   
+---+---+---
+   |   |   
+
+Player's turn 1:
+Input: 1 1 (top-left corner)
+• is_valid_move(0,0) returns true.
+• Place X at (0,0).
+• Print board shows X in top-left corner.
+
+AI's turn 1:
+AI checks:
+• No winning move for O.
+• No opponent winning move to block.
+• Center is free (1,1), AI chooses center.
+• Place O at (1,1).
+• Prints "AI takes the center at (2, 2)."
+• Board now:
+ X |   |   
+---+---+---
+   | O |   
+---+---+---
+   |   |   
+
+Player's turn 2:
+Input: 1 2 (top-center)
+• Valid move.
+• Place X at (0,1).
+• Board:
+ X | X |   
+---+---+---
+   | O |   
+---+---+---
+   |   |   
+
+AI's turn 2:
+AI checks:
+• No immediate winning move for O.
+• Opponent X could win next by placing at (0,2) to complete top row.
+• AI blocks by placing O at (0,2).
+• Prints "AI found opponent's winning move at (1, 3), blocking it."
+• Board:
+ X | X | O 
+---+---+---
+   | O |   
+---+---+---
+   |   |   
+
+Player's turn 3:
+Input: 2 1 (middle-left)
+• Valid move.
+• Place X at (1,0).
+• Board:
+ X | X | O 
+---+---+---
+ X | O |   
+---+---+---
+   |   |   
+
+AI's turn 3:
+AI checks:
+• No immediate win.
+• No immediate threat.
+• Center occupied.
+• Check corners: (2,0) free.
+• AI takes corner (3,1).
+• Prints "AI takes corner at (3, 1)."
+• Board:
+ X | X | O 
+---+---+---
+ X | O |   
+---+---+---
+ O |   |   
+
+This process continues until a player wins or a draw occurs.
+
+Summary
+• The player inputs moves; AI responds based on simple but effective heuristics.
+• The AI tries to win first, block the player second, then takes strategic positions.
+• Debug prints explain every decision, showing why moves are chosen or rejected.
+• This approach demonstrates basic AI decision-making with clear, stepwise logic.
+
+Tic Tac Toe AI using the Magic Square method
+
+Got it! Here's a generalized Tic Tac Toe AI using the Magic Square method in one flow — with detailed debugging print statements explaining the decision-making step-by-step.
+No emojis, just clear explanations for every move.
+
+Explanation before code:
+• We use the classic 3x3 Magic Square with numbers 1 to 9 arranged so that every row, column, diagonal sums to 15.
+• Each player's moves are tracked as the numbers they've chosen.
+• The AI tries to:
+1. Win if possible (find 2 numbers summing to 15 and pick the missing one).
+2. Block opponent's winning move.
+3. Pick the center if free.
+4. Pick corners.
+5. Pick sides.
+• The board is displayed each turn.
+• Debug prints show why AI chose a move.
+
+Full code with detailed debugging:
+#include <stdio.h>
+#include <stdlib.h>
+
+#define EMPTY 0
+#define PLAYER 1
+#define AI 2
+
+int board[9];  // 0=empty, 1=player, 2=AI
+int magic_square[9] = {8, 1, 6,
+                       3, 5, 7,
+                       4, 9, 2}; // positions mapped to magic numbers
+
+// Helper function to print board status
+void print_board() {
+    printf("\nBoard state:\n");
+    for (int i = 0; i < 9; i++) {
+        char c = (board[i] == PLAYER) ? 'X' : (board[i] == AI) ? 'O' : '.';
+        printf("%c ", c);
+        if ((i+1) % 3 == 0) printf("\n");
+    }
+}
+
+// Returns 1 if player with 'mark' (PLAYER or AI) has won, else 0
+int check_winner(int mark) {
+    // Check all lines for sum of magic square numbers for that player = 15
+    int sum_line;
+
+    // Collect player's chosen magic numbers
+    int chosen[5], count = 0;
+    for (int i = 0; i < 9; i++) {
+        if (board[i] == mark) {
+            chosen[count++] = magic_square[i];
+        }
+    }
+
+    if (count < 3) return 0; // Can't have won yet
+
+    // Check all combinations of 3 chosen numbers for sum == 15
+    for (int i = 0; i < count - 2; i++) {
+        for (int j = i + 1; j < count - 1; j++) {
+            for (int k = j + 1; k < count; k++) {
+                sum_line = chosen[i] + chosen[j] + chosen[k];
+                if (sum_line == 15) {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+// Check if game board is full
+int is_board_full() {
+    for (int i = 0; i < 9; i++) {
+        if (board[i] == EMPTY) return 0;
+    }
+    return 1;
+}
+
+// Find index to win or block: returns -1 if none
+int find_critical_move(int mark) {
+    // We look for any 2 chosen numbers by 'mark' whose sum is s,
+    // and the missing number to reach 15 is on empty square
+
+    int chosen[5], count = 0;
+    for (int i = 0; i < 9; i++) {
+        if (board[i] == mark) {
+            chosen[count++] = magic_square[i];
+        }
+    }
+    if (count < 2) return -1; // Need at least two moves to form winning condition
+
+    for (int i = 0; i < count - 1; i++) {
+        for (int j = i + 1; j < count; j++) {
+            int needed = 15 - (chosen[i] + chosen[j]);
+            if (needed <= 0 || needed > 9) continue;
+
+            // Find index of needed number
+            for (int pos = 0; pos < 9; pos++) {
+                if (magic_square[pos] == needed && board[pos] == EMPTY) {
+                    printf("Critical move found for mark %d: Completing %d + %d + %d at position %d\n", 
+                           mark, chosen[i], chosen[j], needed, pos);
+                    return pos;
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+// AI move decision
+void ai_move() {
+    printf("\nAI thinking...\n");
+
+    // 1. Try to win
+    int move = find_critical_move(AI);
+    if (move != -1) {
+        printf("AI decides to WIN by placing at position %d\n", move);
+        board[move] = AI;
+        return;
+    }
+
+    // 2. Try to block player
+    move = find_critical_move(PLAYER);
+    if (move != -1) {
+        printf("AI decides to BLOCK player by placing at position %d\n", move);
+        board[move] = AI;
+        return;
+    }
+
+    // 3. Take center if free
+    if (board[4] == EMPTY) {
+        printf("AI takes CENTER at position 4\n");
+        board[4] = AI;
+        return;
+    }
+
+    // 4. Take a corner if free
+    int corners[] = {0, 2, 6, 8};
+    for (int i = 0; i < 4; i++) {
+        if (board[corners[i]] == EMPTY) {
+            printf("AI takes CORNER at position %d\n", corners[i]);
+            board[corners[i]] = AI;
+            return;
+        }
+    }
+
+    // 5. Take any side
+    int sides[] = {1, 3, 5, 7};
+    for (int i = 0; i < 4; i++) {
+        if (board[sides[i]] == EMPTY) {
+            printf("AI takes SIDE at position %d\n", sides[i]);
+            board[sides[i]] = AI;
+            return;
+        }
+    }
+
+    printf("AI finds no move! This should not happen.\n");
+}
+
+// Player input
+void player_move() {
+    int pos;
+    while(1) {
+        printf("\nEnter your move (0-8): ");
+        scanf("%d", &pos);
+        if (pos < 0 || pos > 8) {
+            printf("Invalid position. Try again.\n");
+            continue;
+        }
+        if (board[pos] != EMPTY) {
+            printf("Position already occupied. Try again.\n");
+            continue;
+        }
+        board[pos] = PLAYER;
+        printf("Player places at position %d\n", pos);
+        break;
+    }
+}
+
+int main() {
+    for (int i = 0; i < 9; i++) board[i] = EMPTY;
+
+    printf("Tic Tac Toe using Magic Square AI\n");
+    print_board();
+
+    while(1) {
+        // Player turn
+        player_move();
+        print_board();
+
+        if (check_winner(PLAYER)) {
+            printf("Player wins!\n");
+            break;
+        }
+        if (is_board_full()) {
+            printf("Game is a draw.\n");
+            break;
+        }
+
+        // AI turn
+        ai_move();
+        print_board();
+
+        if (check_winner(AI)) {
+            printf("AI wins!\n");
+            break;
+        }
+        if (is_board_full()) {
+            printf("Game is a draw.\n");
+            break;
+        }
+    }
+
+    return 0;
+}
+
+How this code works & debugging explanations inside:
+• ai_move():
+o First tries to win by checking if AI already has two numbers summing to 15 - x and x is free.
+o If no winning move, tries to block player’s similar opportunity.
+o Else picks center, corner, or side in order.
+o Prints exactly why it picks a move with the reasoning.
+• find_critical_move():
+o Looks through all pairs of moves made by player or AI.
+o Prints which critical triple sum it tries to complete.
+• Player move:
+o Takes input with validation.
+o Prints chosen position.
+• print_board():
+o Shows the board after each move, so you can follow the game state.
+
+Example run snippet (sample moves):
+Tic Tac Toe using Magic Square AI
+
+Board state:
+. . .
+. . .
+. . .
+
+Enter your move (0-8): 0
+Player places at position 0
+
+Board state:
+X . .
+. . .
+. . .
+
+AI thinking...
+AI takes CENTER at position 4
+
+Board state:
+X . .
+. O .
+. . .
+
+Enter your move (0-8): 2
+Player places at position 2
+
+Board state:
+X . X
+. O .
+. . .
+
+AI thinking...
+Critical move found for mark 2: Completing 8 + 6 + 1 at position 1
+AI decides to BLOCK player by placing at position 1
+
+Board state:
+X O X
+. O .
+. . .
+
+Sure! I'll explain the Tic Tac Toe with Magic Square AI code function-by-function, describe the flow of the code, and then do a dry run example showing how the code works step-by-step.
+
+Function-wise explanation
+1. print_board()
+• Prints the current state of the board.
+• Represents player moves with 'X', AI moves with 'O', and empty spots with '.'.
+• Shows the board as a 3x3 grid for easy visualization.
+
+2. check_winner(int mark)
+• Checks if the player represented by mark (PLAYER = 1 or AI = 2) has won.
+• How?
+o Collects all magic square numbers corresponding to the squares the player has taken.
+o Checks all combinations of 3 numbers among them.
+o If any combination sums exactly to 15, that player has won.
+• Returns 1 if the player has won, 0 otherwise.
+
+3. is_board_full()
+• Checks if the board has no empty spots left.
+• Returns 1 if full (draw possible), 0 if there is still space.
+
+4. find_critical_move(int mark)
+• Finds a critical move for player mark:
+o Looks for any pair of positions that the player occupies whose magic numbers sum to some number.
+o Calculates the third number needed to make 15.
+o Checks if the square with that needed magic number is empty.
+• If found, returns the board index of that critical empty spot to either win (if AI) or block (if player).
+• Returns -1 if no such move found.
+• Prints debugging info showing the reasoning behind the critical move.
+
+5. ai_move()
+• AI decides its move in this order:
+1. Try to win by finding a winning move using find_critical_move(AI).
+2. Try to block the player from winning using find_critical_move(PLAYER).
+3. Take the center if empty.
+4. Take a corner if empty.
+5. Take a side if empty.
+• Prints debug statements explaining the reasoning behind each choice.
+• Updates the board with AI's chosen move.
+
+6. player_move()
+• Takes input from the user for the move position (0 to 8).
+• Validates the input (valid index and empty spot).
+• Updates the board with the player's move.
+• Prints which position player chose.
+
+7. main()
+• Initializes the board to empty.
+• Prints instructions and initial empty board.
+• Game loop:
+o Player moves.
+o Check if player won or board is full.
+o AI moves.
+o Check if AI won or board is full.
+• Ends when either player wins or the board is full (draw).
+
+Overall flow of the code
+1. The board is empty and displayed.
+2. Player inputs a move, it's validated, and placed on the board.
+3. Check if player won or draw.
+4. AI calculates its best move with detailed reasoning.
+5. AI places its move and board is printed.
+6. Check if AI won or draw.
+7. Repeat until win/draw.
+
+Dry run example
+Let's say the player goes first and chooses position 0 (top-left corner).
+
+Initial board (all empty):
+. . .
+. . .
+. . .
+
+Step 1: Player chooses position 0
+• player_move() sets board[0] = PLAYER.
+• Board:
+X . .
+. . .
+. . .
+
+Step 2: AI's turn (ai_move())
+• AI calls find_critical_move(AI) → no moves yet, returns -1.
+• AI calls find_critical_move(PLAYER) → only one move, can't block yet, returns -1.
+• Center (position 4) is empty → AI picks center.
+• Board:
+X . .
+. O .
+. . .
+Prints:
+AI takes CENTER at position 4
+
+Step 3: Player chooses position 2 (top-right corner)
+• player_move() sets board[2] = PLAYER.
+• Board:
+X . X
+. O .
+. . .
+
+Step 4: AI's turn
+• AI calls find_critical_move(AI) → AI only has one move at 4, no winning pair → -1.
+• AI calls find_critical_move(PLAYER):
+o Player positions magic numbers at 8 (pos 0) and 6 (pos 2).
+o Sum = 14, needs 1 to complete 15.
+o Position of magic number 1 is index 1, which is empty.
+o AI finds critical move at position 1 to block.
+• AI places at position 1.
+Board:
+X O X
+. O .
+. . .
+Prints:
+Critical move found for mark 1: Completing 8 + 6 + 1 at position 1
+AI decides to BLOCK player by placing at position 1
+
+Step 5: Player moves at position 6 (bottom-left corner)
+• Board:
+X O X
+. O .
+X . .
+
+Step 6: AI's turn
+• AI tries to win → no winning move yet.
+• Block player? Player now has 3 positions: 8,6,4 magic numbers.
+o Checking pairs:
+• (8 + 6) = 14 → 1 blocked already.
+• (8 + 4) = 12 → needs 3 (pos 3).
+• (6 + 4) = 10 → needs 5 (pos 5).
+o Position 3 and 5 are empty.
+• AI tries to block the next possible win by player:
+o Picks position 3 (first empty critical move).
+• Board:
+X O X
+O O .
+X . .
+Prints:
+Critical move found for mark 1: Completing 8 + 4 + 3 at position 3
+AI decides to BLOCK player by placing at position 3
+
+And so on...
+
+Summary
+• The AI uses magic square properties to identify winning or blocking moves.
+• Player moves and AI moves are displayed with debug info.
+• The AI's decision-making is transparent via print statements.
+• The game ends when either side wins or the board is full.
+
+
+
+
+Tic Tac Toe AI code using the Minimax algorithm
+CODE :-
+#include <stdio.h>
+
+#define PLAYER 'X'
+#define AI 'O'
+
+char board[3][3];
+
+// Prints the current board state
+void print_board() {
+    printf("\nBoard state:\n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            printf(" %c ", board[i][j] == ' ' ? '.' : board[i][j]);  // Show dots for empty spaces
+        }
+        printf("\n");
+    }
+}
+
+// Checks if a player (PLAYER or AI) has won
+int check_winner(char player) {
+    // Rows, columns and diagonals
+    for (int i = 0; i < 3; i++) {
+        // Check rows
+        if (board[i][0] == player && board[i][1] == player && board[i][2] == player)
+            return 1;
+        // Check columns
+        if (board[0][i] == player && board[1][i] == player && board[2][i] == player)
+            return 1;
+    }
+    // Check diagonals
+    if (board[0][0] == player && board[1][1] == player && board[2][2] == player)
+        return 1;
+    if (board[0][2] == player && board[1][1] == player && board[2][0] == player)
+        return 1;
+    return 0;
+}
+
+// Checks if board is full (draw)
+int is_board_full() {
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            if (board[i][j] == ' ')
+                return 0;
+    return 1;
+}
+
+// Minimax algorithm
+// Returns score from the perspective of AI
+int minimax(int depth, int isMaximizing) {
+    if (check_winner(AI)) {
+        return 10 - depth;  // Prefer faster wins
+    }
+    if (check_winner(PLAYER)) {
+        return depth - 10;  // Prefer slower losses
+    }
+    if (is_board_full()) {
+        return 0;
+    }
+
+    if (isMaximizing) {
+        int bestScore = -1000;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (board[i][j] == ' ') {
+                    board[i][j] = AI;
+                    int score = minimax(depth + 1, 0);
+                    board[i][j] = ' ';
+                    if (score > bestScore) {
+                        bestScore = score;
+                    }
+                }
+            }
+        }
+        return bestScore;
+    } else {
+        int bestScore = 1000;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (board[i][j] == ' ') {
+                    board[i][j] = PLAYER;
+                    int score = minimax(depth + 1, 1);
+                    board[i][j] = ' ';
+                    if (score < bestScore) {
+                        bestScore = score;
+                    }
+                }
+            }
+        }
+        return bestScore;
+    }
+}
+
+// AI move decision function
+void ai_move() {
+    int bestScore = -1000;
+    int moveRow = -1, moveCol = -1;
+
+    printf("\nAI is calculating its best move...\n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (board[i][j] == ' ') {
+                board[i][j] = AI;
+                int score = minimax(0, 0);  // Changed from minimax(0, 1) to minimax(0, 0)
+                board[i][j] = ' ';
+                if (score > bestScore) {
+                    bestScore = score;
+                    moveRow = i;
+                    moveCol = j;
+                }
+            }
+        }
+    }
+    
+    // Safety check in case no valid move was found
+    if (moveRow == -1 || moveCol == -1) {
+        // Find first available move
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (board[i][j] == ' ') {
+                    moveRow = i;
+                    moveCol = j;
+                    break;
+                }
+            }
+            if (moveRow != -1) break;
+        }
+    }
+    
+    if (moveRow != -1 && moveCol != -1) {
+        board[moveRow][moveCol] = AI;
+        printf("AI chooses move at position (%d,%d)\n", moveRow, moveCol);
+    }
+}
+
+// Player move input and validation
+void player_move() {
+    int row, col;
+    while (1) {
+        printf("\nEnter your move (row and column: 0 1 2): ");
+        scanf("%d %d", &row, &col);
+        if (row >=0 && row <3 && col >=0 && col < 3 && board[row][col] == ' ') {
+            board[row][col] = PLAYER;
+            break;
+        } else {
+            printf("Invalid move, try again.\n");
+        }
+    }
+}
+
+int main() {
+    // Initialize board with spaces
+    for (int i=0; i<3; i++)
+        for (int j=0; j<3; j++)
+            board[i][j] = ' ';
+
+    printf("Tic Tac Toe: Player (X) vs AI (O)\n");
+
+    print_board();
+
+    while (1) {
+        // Player move
+        player_move();
+        print_board();
+        if (check_winner(PLAYER)) {
+            printf("Player wins!\n");
+            break;
+        }
+        if (is_board_full()) {
+            printf("It's a draw!\n");
+            break;
+        }
+
+        // AI move
+        ai_move();
+        print_board();
+        if (check_winner(AI)) {
+            printf("AI wins!\n");
+            break;
+        }
+        if (is_board_full()) {
+            printf("It's a draw!\n");
+            break;
+        }
+    }
+    return 0;
+}
+Here’s a comprehensive explanation of each function in your Tic Tac Toe code, the overall flow, and a step-by-step dry run example of how the program and AI decision-making works.
+
+🔧 FUNCTION-WISE EXPLANATION
+1. print_board()
+Purpose: Prints the current game board state with . representing empty cells.
+2. check_winner(char player)
+Purpose: Checks whether the given player ('X' or 'O') has won by forming a complete row, column, or diagonal.
+3. is_board_full()
+Purpose: Returns 1 if the board is full (i.e., a draw), otherwise 0.
+4. minimax(int depth, int isMaximizing)
+Purpose: Implements the recursive Minimax algorithm to simulate future moves:
+• If it's the AI's turn (isMaximizing == 1), it tries to maximize score.
+• If it's the player’s turn (isMaximizing == 0), it tries to minimize score.
+• The score returned is based on terminal outcomes (win/loss/draw) and how deep in recursion that occurs (depth).
+5. ai_move()
+Purpose: Tries every possible move for AI ('O'), evaluates them using minimax, and picks the one with the best score.
+6. player_move()
+Purpose: Accepts valid input from the user and places 'X' on the board.
+7. main()
+Purpose: Orchestrates the game: initializes the board, alternates moves between player and AI, checks win/draw conditions, and ends the game.
+
+🧠 HOW AI DECISION-MAKING WORKS
+• AI looks at each empty cell and temporarily places an 'O'.
+• It runs minimax() to simulate what will happen if that move is taken.
+• For every possible future move (by both players), it explores the resulting outcomes.
+• It scores each simulated game and picks the move with the highest score.
+
+🧪 DRY RUN EXAMPLE
+Initial empty board:
+. . .
+. . .
+. . .
+PLAYER move: (0, 0)
+X . .
+. . .
+. . .
+AI Move:
+• AI explores all empty cells to place 'O' and evaluates each using minimax.
+Assume AI is evaluating (0,1):
+1. Puts 'O' at (0,1):
+2. X O .
+3. . . .
+4. . . .
+5. Runs minimax(depth=0, isMaximizing=0) assuming player moves next.
+6. For every empty cell, the player tries a move, and AI responds recursively.
+7. Scores are computed for each move.
+8. Eventually, the AI finds which move gives it:
+o A guaranteed win (score = 10)
+o A draw (score = 0)
+o A guaranteed loss (score = -10)
+After simulating all options, suppose AI finds (1, 1) gives the best long-term score. It plays there.
+Board after AI move:
+X . .
+. O .
+. . .
+And the game continues...
+
+🧾 DEBUGGING PRINT STATEMENTS TO ADD
+To visualize decision-making, add debugging print lines like this:
+In minimax():
+printf("Minimax: Depth %d, isMaximizing: %d\n", depth, isMaximizing);
+printf("Evaluating move at (%d,%d) with temp player '%c'\n", i, j, isMaximizing ? AI : PLAYER);
+printf("Score from move at (%d,%d): %d\n", i, j, score);
+In ai_move():
+printf("AI evaluating move at (%d,%d)\n", i, j);
+printf("Score for move (%d,%d): %d\n", i, j, score);
+This will show:
+• Which move is being tried.
+• Whether it's maximizing or minimizing.
+• What score it leads to.
+• Why a move was chosen.
+--------------------------------------------------------------------------------------------------------------------------------------------
+Tic Tac Toe AI code with Alpha-Beta Pruning,
+Got it! Here’s a generalized Tic Tac Toe AI code with Alpha-Beta Pruning, including detailed debugging print statements that explain each AI decision step by step.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define SIZE 3
+
+char board[SIZE][SIZE];
+
+// Initialize board with spaces
+void init_board() {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            board[i][j] = ' ';
+}
+
+// Print current board state
+void print_board() {
+    printf("\n");
+    for (int i = 0; i < SIZE; i++) {
+        printf(" ");
+        for (int j = 0; j < SIZE; j++) {
+            printf("%c", board[i][j]);
+            if (j < SIZE - 1) printf(" | ");
+        }
+        printf("\n");
+        if (i < SIZE - 1) printf("---+---+---\n");
+    }
+    printf("\n");
+}
+
+// Check if player ('X' or 'O') has won
+int check_win(char player) {
+    // Rows and columns
+    for (int i = 0; i < SIZE; i++) {
+        if ((board[i][0] == player && board[i][1] == player && board[i][2] == player) ||
+            (board[0][i] == player && board[1][i] == player && board[2][i] == player))
+            return 1;
+    }
+    // Diagonals
+    if ((board[0][0] == player && board[1][1] == player && board[2][2] == player) ||
+        (board[0][2] == player && board[1][1] == player && board[2][0] == player))
+        return 1;
+
+    return 0;
+}
+
+// Check if board is full => draw
+int is_draw() {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (board[i][j] == ' ')
+                return 0;
+    return 1;
+}
+
+// Evaluate the board: +10 if AI wins, -10 if player wins, 0 otherwise
+int evaluate() {
+    if (check_win('O')) return +10;  // AI
+    else if (check_win('X')) return -10; // Player
+    else return 0;
+}
+
+// Minimax with alpha-beta pruning
+int minimax(int depth, int isMaximizingPlayer, int alpha, int beta) {
+    int score = evaluate();
+
+    // If AI wins or player wins or draw, return score
+    if (score == 10 || score == -10)
+        return score;
+    if (is_draw())
+        return 0;
+
+    if (isMaximizingPlayer) {
+        int best = -1000;
+
+        printf("Maximizer's turn at depth %d with alpha=%d, beta=%d\n", depth, alpha, beta);
+
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
+                if (board[i][j] == ' ') {
+                    board[i][j] = 'O';
+                    printf("Trying move O at (%d,%d)\n", i + 1, j + 1);
+
+                    int val = minimax(depth + 1, 0, alpha, beta);
+
+                    board[i][j] = ' ';
+                    printf("Move O at (%d,%d) yields score %d\n", i + 1, j + 1, val);
+
+                    if (val > best) {
+                        best = val;
+                        printf("New best move for Maximizer found with score %d at (%d,%d)\n", best, i + 1, j + 1);
+                    }
+                    alpha = (alpha > best) ? alpha : best;
+
+                    if (beta <= alpha) {
+                        printf("Pruning branches for Maximizer at depth %d: alpha=%d, beta=%d\n", depth, alpha, beta);
+                        return best;
+                    }
+                }
+            }
+        }
+        return best;
+    } else {
+        int best = 1000;
+
+        printf("Minimizer's turn at depth %d with alpha=%d, beta=%d\n", depth, alpha, beta);
+
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
+                if (board[i][j] == ' ') {
+                    board[i][j] = 'X';
+                    printf("Trying move X at (%d,%d)\n", i + 1, j + 1);
+
+                    int val = minimax(depth + 1, 1, alpha, beta);
+
+                    board[i][j] = ' ';
+                    printf("Move X at (%d,%d) yields score %d\n", i + 1, j + 1, val);
+
+                    if (val < best) {
+                        best = val;
+                        printf("New best move for Minimizer found with score %d at (%d,%d)\n", best, i + 1, j + 1);
+                    }
+                    beta = (beta < best) ? beta : best;
+
+                    if (beta <= alpha) {
+                        printf("Pruning branches for Minimizer at depth %d: alpha=%d, beta=%d\n", depth, alpha, beta);
+                        return best;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+}
+
+// AI chooses the best move using minimax + alpha-beta pruning
+void ai_move() {
+    int bestVal = -1000;
+    int bestMoveRow = -1, bestMoveCol = -1;
+
+    printf("AI is calculating the best move...\n");
+
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (board[i][j] == ' ') {
+                board[i][j] = 'O';
+                printf("AI tries move at (%d, %d)\n", i + 1, j + 1);
+
+                int moveVal = minimax(0, 0, -1000, 1000);
+
+                board[i][j] = ' ';
+
+                printf("Move at (%d, %d) has minimax value %d\n", i + 1, j + 1, moveVal);
+
+                if (moveVal > bestVal) {
+                    bestVal = moveVal;
+                    bestMoveRow = i;
+                    bestMoveCol = j;
+                    printf("AI updates best move to (%d, %d) with value %d\n", bestMoveRow + 1, bestMoveCol + 1, bestVal);
+                }
+            }
+        }
+    }
+
+    board[bestMoveRow][bestMoveCol] = 'O';
+    printf("AI places O at (%d, %d)\n", bestMoveRow + 1, bestMoveCol + 1);
+}
+
+// Check if move is valid (inside board & empty)
+int is_valid_move(int row, int col) {
+    if (row < 0 || row >= SIZE || col < 0 || col >= SIZE)
+        return 0;
+    if (board[row][col] != ' ')
+        return 0;
+    return 1;
+}
+
+int main() {
+    int row, col;
+    init_board();
+
+    printf("Tic Tac Toe: You are X, AI is O.\n");
+    print_board();
+
+    while (1) {
+        // Player move
+        do {
+            printf("Enter your move (row and column: 1 1 to 3 3): ");
+            scanf("%d %d", &row, &col);
+            row--; col--; // zero-indexed
+            if (!is_valid_move(row, col))
+                printf("Invalid move! Try again.\n");
+        } while (!is_valid_move(row, col));
+
+        board[row][col] = 'X';
+        printf("Player places X at (%d, %d)\n", row + 1, col + 1);
+        print_board();
+
+        if (check_win('X')) {
+            printf("Congratulations! You win!\n");
+            break;
+        }
+        if (is_draw()) {
+            printf("Game is a draw.\n");
+            break;
+        }
+
+        // AI move
+        ai_move();
+        print_board();
+
+        if (check_win('O')) {
+            printf("AI wins! Better luck next time.\n");
+            break;
+        }
+        if (is_draw()) {
+            printf("Game is a draw.\n");
+            break;
+        }
+    }
+
+    return 0;
+}
+
+Explanation of Flow & Debugging
+• minimax() is the core function implementing the minimax algorithm with alpha-beta pruning.
+o It recursively explores all possible moves.
+o isMaximizingPlayer switches between AI (O) and player (X).
+o alpha and beta prune the search space to improve efficiency.
+o The debug prints show which move is tried, the value returned, and when pruning occurs.
+• ai_move():
+o Iterates over all empty spots.
+o For each, it calls minimax() to get the move’s value.
+o Chooses the move with the highest minimax value.
+o Prints detailed reasoning on each move tried and the best move selected.
+• Main loop:
+o Takes input from player with validation.
+o Checks for win/draw.
+o Calls ai_move() for AI’s turn.
+o Checks for win/draw again.
+o Prints the board and all debug info along the way.
+
+Sample Debug Output Snippet (imagined)
+Enter your move (row and column: 1 1 to 3 3): 1 1
+Player places X at (1, 1)
+
+    |   |   
+---+---+---
+    |   |   
+---+---+---
+    |   |   
+
+AI is calculating the best move...
+AI tries move at (1, 2)
+Maximizer's turn at depth 0 with alpha=-1000, beta=1000
+Trying move O at (1, 2)
+...
+Move O at (1, 2) yields score 0
+New best move for Maximizer found with score 0 at (1, 2)
+...
+AI updates best move to (1, 2) with value 0
+AI places O at (1, 2)
+
+...
+
+Board after AI move:
+
+  X | O |   
+---+---+---
+    |   |   
+---+---+---
+    |   |   
+
+This structure allows you to see exactly:
+• What moves AI considers
+• What scores those moves produce
+• When alpha-beta pruning skips unnecessary branches
+• What final move AI picks
+
+Let’s go through the Tic Tac Toe with Alpha-Beta Pruning AI step-by-step:
+
+🔧 FUNCTION EXPLANATIONS
+
+init_board()
+Purpose: Initializes the board to an empty 3x3 grid (' ' in each cell).
+
+print_board()
+Purpose: Nicely prints the current state of the board.
+
+check_win(char player)
+Purpose: Checks if a given player ('X' or 'O') has won by:
+• Having 3 in a row (horizontally, vertically, or diagonally).
+
+is_draw()
+Purpose: Returns 1 if the board is full and there is no winner; otherwise returns 0.
+
+evaluate()
+Purpose: Evaluates the board state:
+• +10 if AI ('O') has won.
+• -10 if player ('X') has won.
+• 0 if no winner.
+
+minimax(int depth, int isMaximizingPlayer, int alpha, int beta)
+Purpose: Core logic for AI decision-making using Minimax with Alpha-Beta Pruning.
+How it works:
+• Recursively evaluates all possible future game states.
+• Maximizing player (AI - 'O') tries to maximize score.
+• Minimizing player (human - 'X') tries to minimize score.
+• Alpha-Beta pruning avoids exploring branches that cannot influence the final decision.
+• Extensive debug prints show:
+o Which move is being tried.
+o What value it results in.
+o When pruning happens and why.
+
+ai_move()
+Purpose: Uses minimax() to find and execute the best move for the AI.
+• Tries each empty cell.
+• Simulates the move.
+• Evaluates the result using minimax().
+• Picks the move with the highest score.
+
+is_valid_move(int row, int col)
+Purpose: Returns whether the input move is within bounds and on an empty cell.
+
+main()
+Purpose: Game loop.
+• Initializes board.
+• Alternates between player and AI turns.
+• Checks for wins or draw after every move.
+
+🔁 FLOW OF THE PROGRAM
+1. Board is initialized.
+2. Game loop begins:
+o Player inputs a move.
+o Move is validated and made.
+o Board is printed.
+o Check for player win/draw.
+o AI calculates best move using ai_move():
+• Tries all legal moves.
+• Uses minimax() to simulate future plays and backtrack best move.
+• Applies pruning to skip useless computations.
+o AI plays move and prints board.
+o Check for AI win/draw.
+3. Game ends on win or draw.
+
+🧪 DRY RUN EXAMPLE (Player = X, AI = O)
+Let’s walk through a sample play (first few moves):
+Initial empty board
+   |   |   
+---+---+---
+   |   |   
+---+---+---
+   |   |   
+Player inputs (1 1) → top-left
+ X |   |   
+---+---+---
+   |   |   
+---+---+---
+   |   |   
+AI's turn
+AI tries all positions:
+• For each position, AI places 'O', runs minimax() with human's turn next.
+Let’s say AI considers:
+• (1,2):
+o AI places 'O'.
+o Player will go next — try placing 'X' in best location.
+o Simulation continues recursively.
+o Eventually returns a value (e.g., 0 or -10).
+Same is done for other positions (1,3), (2,1)... etc.
+AI compares all these values and picks the highest one.
+AI places O at (2,2) — center is best
+ X |   |   
+---+---+---
+   | O |   
+---+---+---
+   |   |   
+Debug output shows:
+AI is calculating the best move...
+AI tries move at (2, 2)
+Maximizer's turn at depth 0 with alpha=-1000, beta=1000
+Trying move O at (2, 2)
+...
+Move O at (2, 2) yields score 0
+New best move for Maximizer found with score 0 at (2,2)
+AI updates best move to (2,2) with value 0
+AI places O at (2, 2)
+
+Summary
+Function
+Role
+init_board()
+Initializes game state
+print_board()
+Shows current board to user
+check_win()
+Checks for a win (3 in a row)
+is_draw()
+Checks if all spaces are filled and no winner
+evaluate()
+Gives score for board (win/loss/tie)
+minimax()
+Explores all moves recursively to find best one using Alpha-Beta
+ai_move()
+Chooses best move by evaluating each possible move with minimax()
+main()
+Controls game loop (player and AI turn alternation)
+
